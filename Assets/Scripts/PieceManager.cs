@@ -2,6 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public struct UnitSpawnCommand {
+    public int unitTypeID; 
+    public int x;
+    public int y;
+    public int team; // 0 для тебя, 1 для противника
+}
+
 public class PieceManager : MonoBehaviour
 {
     public GameObject mPiecePrefab;
@@ -47,5 +55,18 @@ public class PieceManager : MonoBehaviour
         allUnits.AddRange(mMyMinis);
         allUnits.AddRange(mEnemyMinis);
         return allUnits;
+    }
+
+    public void ClearBoard() {
+        // Чистим всех юнитов на доске
+        foreach (var cell in mBoard.mAllCells) {
+            if (cell.mCurrentPiece != null) {
+                Destroy(cell.mCurrentPiece.gameObject);
+                cell.mCurrentPiece = null;
+            }
+        }
+        // Обнуляем списки
+        mMyMinis.Clear();
+        mEnemyMinis.Clear();
     }
 }
