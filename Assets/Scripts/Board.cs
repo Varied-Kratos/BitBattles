@@ -19,7 +19,7 @@ public class Board : MonoBehaviour
     // Для Clash Mini поле 5 в ширину и 10 в длину (всего 50)
     [HideInInspector]
     public Cell[,] mAllCells = new Cell[5, 10];
-
+    public GameObject mFullBackground; // Перетащи в инспекторе
     public void Create()
     {
         mAllCells = new Cell[5, 10]; 
@@ -85,5 +85,14 @@ public class Board : MonoBehaviour
         }
 
         return CellState.Free;
+    }
+    void Start()
+    {
+        if (mFullBackground != null)
+        {
+            RectTransform bgRect = mFullBackground.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(500, 1000);
+            bgRect.anchoredPosition = new Vector2(250, 500); // Центр поля
+        }
     }
 }

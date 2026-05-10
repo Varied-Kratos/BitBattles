@@ -10,7 +10,7 @@ public abstract class BasePiece : EventTrigger
     public bool mIsFirstMove = true;
 
     protected Cell mOriginalCell = null;
-    protected Cell mCurrentCell = null;
+    public Cell mCurrentCell = null;
 
     protected RectTransform mRectTransform = null;
     protected PieceManager mPieceManager;
@@ -31,6 +31,8 @@ public abstract class BasePiece : EventTrigger
     public float movementSpeed = 1.0f; // модификатор скорости движения
     public int cost = 1;               // стоимость юнита для бюджета отряда
     public int unitID = 0;             // числовой идентификатор типа (Knight=1, Archer=2…)
+
+    protected float mLastAttackTime = -999f;
 
     public virtual void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
@@ -169,20 +171,16 @@ public abstract class BasePiece : EventTrigger
 
     protected virtual void Move()
     {
-        // First move switch
         mIsFirstMove = false;
 
-        // If there is an enemy piece, remove it
-        mTargetCell.RemovePiece();
+        if (mTargetCell.mCurrentPiece != null)
+            mTargetCell.RemovePiece();
 
-        // Clear current
         mCurrentCell.mCurrentPiece = null;
 
-        // Switch cells
         mCurrentCell = mTargetCell;
         mCurrentCell.mCurrentPiece = this;
 
-        // Move on board
         transform.position = mCurrentCell.transform.position;
         mTargetCell = null;
     }
@@ -243,4 +241,179 @@ public abstract class BasePiece : EventTrigger
         mPieceManager.SwitchSides(mColor);
     }
     #endregion
+
+    // Поиск ближайшего врага
+    public BasePiece FindNearestEnemy()
+    {
+        List<BasePiece> enemies;
+
+        // Определяем, в каком списке искать врагов
+        if (mColor == Color.white)
+            enemies = mPieceManager.mEnemyMinis;
+        else
+            enemies = mPieceManager.mMyMinis;
+
+        BasePiece nearest = null;
+        float minDistance = float.MaxValue;
+
+        foreach (BasePiece enemy in enemies)
+        {
+            if (enemy == null || !enemy.gameObject.activeSelf)
+                continue;
+
+            float dist = Vector2Int.Distance(
+                mCurrentCell.mBoardPosition,
+                enemy.mCurrentCell.mBoardPosition
+            );
+
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                nearest = enemy;
+            }
+        }
+
+        return nearest;
+    }
+
+    // Проверка, может ли юнит атаковать цель (по дальности)
+    public bool CanAttackTarget(BasePiece target)
+    {
+        if (target == null || !target.gameObject.activeSelf)
+            return false;
+
+        float dist = Vector2Int.Distance(
+            mCurrentCell.mBoardPosition,
+            target.mCurrentCell.mBoardPosition
+        );
+
+        return dist <= attackRange;
+    }
+
+    // Нанесение урона цели
+    public virtual void AttackTarget(BasePiece target)
+    {
+        if (target == null) return;
+
+        target.TakeDamage(damage);
+        Debug.Log($"{gameObject.name} ({unitID}) атакует на {damage} урона! У цели осталось {target.currentHP} HP");
+
+        mLastAttackTime = Time.time;
+    }
+
+    // Получение урона
+    public virtual void TakeDamage(int amount)
+    {
+        currentHP -= amount;
+
+        if (currentHP <= 0)
+        {
+            currentHP = 0;
+            Die();
+        }
+    }
+
+    // Смерть юнита
+    public virtual void Die()
+    {
+        Debug.Log($"{gameObject.name} ({unitID}) погибает!");
+
+        // Убираем из списков
+        if (mColor == Color.white)
+            mPieceManager.mMyMinis.Remove(this);
+        else
+            mPieceManager.mEnemyMinis.Remove(this);
+
+        // Очищаем клетку
+        if (mCurrentCell != null)
+            mCurrentCell.mCurrentPiece = null;
+
+        // Удаляем объект
+        Destroy(gameObject);
+    }
+
+    // Получение соседней клетки в сторону цели (для движения)
+    public Cell GetCellTowardsTarget(BasePiece target)
+    {
+        if (target == null) return null;
+
+        Vector2Int myPos = mCurrentCell.mBoardPosition;
+        Vector2Int targetPos = target.mCurrentCell.mBoardPosition;
+
+        Vector2Int bestCell = myPos;
+        float bestDist = float.MaxValue;
+
+        // Проверяем 4 соседние клетки (вверх, вниз, влево, вправо)
+        Vector2Int[] directions = new Vector2Int[]
+        {
+        new Vector2Int(0, 1),
+        new Vector2Int(0, -1),
+        new Vector2Int(1, 0),
+        new Vector2Int(-1, 0)
+        };
+
+        foreach (Vector2Int dir in directions)
+        {
+            Vector2Int newPos = myPos + dir;
+            CellState state = mCurrentCell.mBoard.ValidateCell(newPos.x, newPos.y, this);
+
+            // Идём только в свободные клетки
+            if (state != CellState.Free)
+                continue;
+
+            float dist = Vector2Int.Distance(newPos, targetPos);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                bestCell = newPos;
+            }
+        }
+
+        if (bestCell == myPos)
+            return null; // Нет доступных клеток для движения
+
+        return mCurrentCell.mBoard.mAllCells[bestCell.x, bestCell.y];
+    }
+
+    // Движение в указанную клетку
+    public virtual void MoveToCell(Cell targetCell)
+    {
+        if (targetCell == null) return;
+
+        // Освобождаем текущую клетку
+        if (mCurrentCell != null)
+            mCurrentCell.mCurrentPiece = null;
+
+        // Занимаем новую
+        mCurrentCell = targetCell;
+        mCurrentCell.mCurrentPiece = this;
+        transform.position = mCurrentCell.transform.position;
+
+        Debug.Log($"{gameObject.name} ({unitID}) движется к {mCurrentCell.mBoardPosition}");
+    }
+
+    // Основное действие юнита за ход
+    public virtual void TakeTurn()
+    {
+        BasePiece target = FindNearestEnemy();
+
+        if (target == null)
+            return; // Нет врагов — ничего не делаем
+
+        // Если можем атаковать — атакуем
+        if (CanAttackTarget(target))
+        {
+            AttackTarget(target);
+        }
+        else
+        {
+            // Иначе двигаемся к цели
+            Cell nextCell = GetCellTowardsTarget(target);
+            if (nextCell != null)
+            {
+                MoveToCell(nextCell);
+            }
+        }
+
+    }
 }
