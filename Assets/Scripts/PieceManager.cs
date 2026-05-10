@@ -14,9 +14,15 @@ public class PieceManager : MonoBehaviour
     public void Setup(Board board)
     {
         mBoard = board;
-        
-        SpawnUnit(typeof(Hero), Color.white, new Color32(80, 124, 159, 255), new Vector2Int(2, 0));
-        SpawnUnit(typeof(Hero), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9));
+
+        // Игрок
+        SpawnUnit(typeof(Knight), Color.white, new Color32(80, 124, 159, 255), new Vector2Int(2, 0));
+        SpawnUnit(typeof(Archer), Color.white, new Color32(80, 200, 100, 255), new Vector2Int(1, 0));
+        SpawnUnit(typeof(Mage), Color.white, new Color32(200, 80, 200, 255), new Vector2Int(3, 0));
+
+        // Противник
+        SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9));
+        SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9));
     }
 
     public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos)
@@ -26,7 +32,7 @@ public class PieceManager : MonoBehaviour
         newPieceObject.transform.localScale = Vector3.one;
 
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
-        
+
         newPiece.Setup(teamColor, spriteColor, this);
         newPiece.Place(mBoard.mAllCells[pos.x, pos.y]);
 

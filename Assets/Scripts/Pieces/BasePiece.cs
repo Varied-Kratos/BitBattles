@@ -20,6 +20,18 @@ public abstract class BasePiece : EventTrigger
     protected Vector3Int mMovement = Vector3Int.one;
     protected List<Cell> mHighlightedCells = new List<Cell>();
 
+    [Header("Combat Stats")]
+    public int maxHP = 10;
+    public int currentHP;
+    public int damage = 3;
+    public int attackRange = 1;
+    public float attackSpeed = 1.0f;   // задержка в секундах
+
+    [Header("AI & GA Params")]
+    public float movementSpeed = 1.0f; // модификатор скорости движения
+    public int cost = 1;               // стоимость юнита для бюджета отряда
+    public int unitID = 0;             // числовой идентификатор типа (Knight=1, Archer=2…)
+
     public virtual void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
         mPieceManager = newPieceManager;
@@ -27,6 +39,9 @@ public abstract class BasePiece : EventTrigger
         mColor = newTeamColor;
         GetComponent<Image>().color = newSpriteColor;
         mRectTransform = GetComponent<RectTransform>();
+
+        // При создании юнита его здоровье полное
+        currentHP = maxHP;
     }
 
     public virtual void Place(Cell newCell)
