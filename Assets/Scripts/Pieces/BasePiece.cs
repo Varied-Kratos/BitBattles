@@ -5,6 +5,12 @@ using System.Collections.Generic;
 
 public abstract class BasePiece : EventTrigger
 {
+    // В начало класса, где другие поля
+    private HealthBar mHealthBar;
+    private static Canvas mHealthBarCanvas;
+
+    public static GameObject HealthBarPrefab;
+
     [HideInInspector]
     public Color mColor = Color.clear;
     public bool mIsFirstMove = true;
@@ -33,17 +39,33 @@ public abstract class BasePiece : EventTrigger
     public int unitID = 0;             // числовой идентификатор типа (Knight=1, Archer=2…)
 
     protected float mLastAttackTime = -999f;
+    // Новые поля (добавь в начало класса)
+    private static Camera mMainCamera;
+    private static Canvas mMainCanvas;
+    // Новый метод для создания HealthBar
 
     public virtual void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
         mPieceManager = newPieceManager;
-
         mColor = newTeamColor;
         GetComponent<Image>().color = newSpriteColor;
         mRectTransform = GetComponent<RectTransform>();
-
-        // При создании юнита его здоровье полное
         currentHP = maxHP;
+
+        // Создаём HealthBar
+        CreateHealthBar();
+    }
+
+    private void CreateHealthBar()
+    {
+        GameObject healthBarObj = new GameObject("HealthBar");
+        healthBarObj.transform.SetParent(transform, false);
+
+        RectTransform rt = healthBarObj.AddComponent<RectTransform>();
+        rt.localPosition = Vector3.zero;
+
+        mHealthBar = healthBarObj.AddComponent<HealthBar>();
+        mHealthBar.Setup(this);
     }
 
     public virtual void Place(Cell newCell)
@@ -313,25 +335,21 @@ public abstract class BasePiece : EventTrigger
         }
     }
 
-    // Смерть юнита
     public virtual void Die()
     {
         Debug.Log($"{gameObject.name} ({unitID}) погибает!");
 
-        // Убираем из списков
         if (mColor == Color.white)
             mPieceManager.mMyMinis.Remove(this);
         else
             mPieceManager.mEnemyMinis.Remove(this);
 
-        // Очищаем клетку
         if (mCurrentCell != null)
             mCurrentCell.mCurrentPiece = null;
 
-        // Удаляем объект
+        // HealthBar уничтожится вместе с юнитом (он дочерний)
         Destroy(gameObject);
     }
-
     // Получение соседней клетки в сторону цели (для движения)
     public Cell GetCellTowardsTarget(BasePiece target)
     {
