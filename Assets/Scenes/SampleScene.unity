@@ -165,6 +165,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PieceManager
   mPiecePrefab: {fileID: 7933402025232920336, guid: d6007f9c883e440f9abee3a9fd1d8f28, type: 3}
+  mMyMinis: []
+  mEnemyMinis: []
+  turnDelay: 1
 --- !u!114 &451089946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -178,6 +181,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Board
   mCellPrefab: {fileID: 3441378228568691777, guid: b18372b5112244d588884dc2004f2d2f, type: 3}
+  mFullBackground: {fileID: 0}
 --- !u!224 &451089947
 RectTransform:
   m_ObjectHideFlags: 0
@@ -299,6 +303,7 @@ GameObject:
   m_Component:
   - component: {fileID: 807286553}
   - component: {fileID: 807286552}
+  - component: {fileID: 807286554}
   m_Layer: 0
   m_Name: AI_Controller
   m_TagString: Untagged
@@ -334,6 +339,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &807286554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 807286551}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94d824ef96a454fdb80f9ef15100168f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PythonConnector
+  host: 127.0.0.1
+  port: 5005
+  boardEncoder: {fileID: 807286552}
 --- !u!1 &844583154
 GameObject:
   m_ObjectHideFlags: 0
