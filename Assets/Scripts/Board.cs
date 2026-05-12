@@ -9,7 +9,8 @@ public enum CellState
     Friendly,
     Enemy,
     Free,
-    OutOfBounds
+    OutOfBounds,
+    InvalidTeamSide
 }
 
 public class Board : MonoBehaviour
@@ -68,24 +69,6 @@ public class Board : MonoBehaviour
         #endregion
     }
 
-    public CellState ValidateCell(int targetX, int targetY, BasePiece checkingPiece)
-    {
-        // Обновленная проверка границ под 5x10
-        if (targetX < 0 || targetX >= 5 || targetY < 0 || targetY >= 10)
-            return CellState.OutOfBounds;
-
-        Cell targetCell = mAllCells[targetX, targetY];
-
-        if (targetCell.mCurrentPiece != null)
-        {
-            if (checkingPiece.mColor == targetCell.mCurrentPiece.mColor)
-                return CellState.Friendly;
-
-            return CellState.Enemy;
-        }
-
-        return CellState.Free;
-    }
     void Start()
     {
         if (mFullBackground != null)
@@ -95,4 +78,29 @@ public class Board : MonoBehaviour
             bgRect.anchoredPosition = new Vector2(250, 500); // Центр поля
         }
     }
+
+    public CellState ValidateCell(int targetX, int targetY, BasePiece checkingPiece)
+    {
+        // Границы поля
+        if (targetX < 0 || targetX >= 5 || targetY < 0 || targetY >= 10)
+            return CellState.OutOfBounds;
+
+        // Проверка стороны: белые только в нижней половине (y < 5), чёрные в верхней (y >= 5)
+        if (checkingPiece.mColor == Color.white && targetY >= 5)
+            return CellState.InvalidTeamSide;
+        if (checkingPiece.mColor == Color.black && targetY < 5)
+            return CellState.InvalidTeamSide;
+
+        Cell targetCell = mAllCells[targetX, targetY];
+
+        if (targetCell.mCurrentPiece != null)
+        {
+            if (checkingPiece.mColor == targetCell.mCurrentPiece.mColor)
+                return CellState.Friendly;
+            return CellState.Enemy;
+        }
+
+        return CellState.Free;
+    }
 }
+

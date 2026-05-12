@@ -13,6 +13,5 @@ public class Archer : BasePiece
         cost = 2;
 
         base.Setup(newTeamColor, newSpriteColor, newPieceManager);
-        mMovement = new Vector3Int(1, 2, 0);
     }
 }

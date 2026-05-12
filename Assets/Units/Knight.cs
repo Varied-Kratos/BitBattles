@@ -13,6 +13,5 @@ public class Knight : BasePiece
         cost = 3;
 
         base.Setup(newTeamColor, newSpriteColor, newPieceManager);
-        mMovement = new Vector3Int(1, 1, 0);
     }
 }

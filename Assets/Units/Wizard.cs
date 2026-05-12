@@ -13,6 +13,5 @@ public class Mage : BasePiece
         cost = 4;
 
         base.Setup(newTeamColor, newSpriteColor, newPieceManager);
-        mMovement = new Vector3Int(1, 1, 0);
     }
 }

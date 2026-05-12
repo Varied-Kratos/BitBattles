@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,8 +9,8 @@ public class PieceManager : MonoBehaviour
 
     public List<BasePiece> mMyMinis = new List<BasePiece>();
     public List<BasePiece> mEnemyMinis = new List<BasePiece>();
-
-    private Board mBoard;
+    public static bool IsBattleActive { get; private set; }
+    public Board mBoard;
 
     [Header("Battle Settings")]
     public float turnDelay = 1.0f;
@@ -20,158 +20,116 @@ public class PieceManager : MonoBehaviour
     {
         mBoard = board;
 
-        // Игрок (белые)
-        SpawnUnit(typeof(Knight), Color.white, new Color32(80, 124, 159, 255), new Vector2Int(2, 0));
-        SpawnUnit(typeof(Archer), Color.white, new Color32(80, 200, 100, 255), new Vector2Int(1, 0));
-        SpawnUnit(typeof(Mage), Color.white, new Color32(200, 80, 200, 255), new Vector2Int(3, 0));
+        // Р’СЂР°РіРё (isPlayer = false)
+        SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
+        SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
+        SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
 
-        // Противник (чёрные)
-        SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9));
-        SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9));
-        SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9));
+        Debug.Log($"mMyMinis.Count = {mMyMinis.Count}, mEnemyMinis.Count = {mEnemyMinis.Count}");
     }
 
-    public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos)
+    public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
     {
+        Debug.Log($"SpawnUnit: {unitType.Name}, isPlayer={isPlayer}, СЃРїРёСЃРѕРє: {(isPlayer ? "mMyMinis" : "mEnemyMinis")}");
+
         GameObject newPieceObject = Instantiate(mPiecePrefab);
         newPieceObject.transform.SetParent(transform);
         newPieceObject.transform.localScale = Vector3.one;
 
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
-        newPiece.name = $"{unitType.Name}_{teamColor}";
+        newPiece.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
 
         newPiece.Setup(teamColor, spriteColor, this);
         newPiece.Place(mBoard.mAllCells[pos.x, pos.y]);
 
-        if (teamColor == Color.white)
-            mMyMinis.Add(newPiece);
-        else
-            mEnemyMinis.Add(newPiece);
-    }
-
-    public void StartBattle()
-    {
-        if (!mBattleInProgress)
+        if (isPlayer)
         {
-            mBattleInProgress = true;
-            StartCoroutine(BattleLoop());
+            mMyMinis.Add(newPiece);
+            Debug.Log($"Р”РѕР±Р°РІР»РµРЅ РІ mMyMinis: {newPiece.name}");
+        }
+        else
+        {
+            mEnemyMinis.Add(newPiece);
+            Debug.Log($"Р”РѕР±Р°РІР»РµРЅ РІ mEnemyMinis: {newPiece.name}");
         }
     }
 
     private IEnumerator BattleLoop()
     {
-        Debug.Log("=== БОЙ НАЧАЛСЯ ===");
+        Debug.Log("=== Р‘РћР™ РќРђР§РђР›РЎРЇ ===");
 
-        while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0)
+        int round = 0;
+        while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0 && round < 50)
         {
-            // === ФАЗА 1: ВСЕ ВЫБИРАЮТ ЦЕЛИ ===
+            round++;
+            CleanDeadUnits();
             List<BasePiece> allUnits = GetAliveUnits();
 
-            // Словарь: кто кого атакует
             Dictionary<BasePiece, BasePiece> attacks = new Dictionary<BasePiece, BasePiece>();
-            // Словарь: кто в какую клетку хочет пойти
             Dictionary<BasePiece, Cell> desiredMoves = new Dictionary<BasePiece, Cell>();
 
+            // Р¤РђР—Рђ 1: Р’Р«Р‘РћР  Р¦Р•Р›Р•Р™
             foreach (BasePiece unit in allUnits)
             {
+                if (unit == null || !unit.gameObject.activeSelf) continue;
+
                 BasePiece enemy = unit.FindNearestEnemy();
-                if (enemy == null) continue;
+                if (enemy == null || !enemy.gameObject.activeSelf) continue;
 
                 if (unit.CanAttackTarget(enemy))
                 {
                     attacks[unit] = enemy;
+                    Debug.Log($"{unit.name} в†’ Р±СѓРґРµС‚ Р°С‚Р°РєРѕРІР°С‚СЊ {enemy.name}");
                 }
                 else
                 {
                     Cell nextCell = unit.GetCellTowardsTarget(enemy);
-                    if (nextCell != null)
+                    if (nextCell != null && nextCell.mCurrentPiece == null)
                     {
                         desiredMoves[unit] = nextCell;
+                        Debug.Log($"{unit.name} в†’ РґРІРёР¶РµС‚СЃСЏ Рє {nextCell.mBoardPosition}");
                     }
                 }
             }
 
-            // === ФАЗА 2: ДВИЖЕНИЕ (с проверкой конфликтов) ===
-            // Сортируем движения по расстоянию до цели (кто ближе — тот первый занимает клетку)
-            List<KeyValuePair<BasePiece, Cell>> sortedMoves = new List<KeyValuePair<BasePiece, Cell>>(desiredMoves);
-            sortedMoves.Sort((a, b) =>
-            {
-                BasePiece enemyA = a.Key.FindNearestEnemy();
-                BasePiece enemyB = b.Key.FindNearestEnemy();
-                if (enemyA == null || enemyB == null) return 0;
-
-                float distA = Vector2Int.Distance(a.Key.mCurrentCell.mBoardPosition, enemyA.mCurrentCell.mBoardPosition);
-                float distB = Vector2Int.Distance(b.Key.mCurrentCell.mBoardPosition, enemyB.mCurrentCell.mBoardPosition);
-                return distA.CompareTo(distB);
-            });
-
-            // Множество занятых клеток (клетки, куда уже кто-то пошёл)
-            HashSet<Vector2Int> reservedCells = new HashSet<Vector2Int>();
-
-            foreach (var kvp in sortedMoves)
+            // Р¤РђР—Рђ 2: Р”Р’РР–Р•РќРР•
+            foreach (var kvp in desiredMoves)
             {
                 BasePiece unit = kvp.Key;
                 Cell targetCell = kvp.Value;
 
-                // Проверяем, что:
-                // 1. Юнит ещё жив
-                // 2. Клетка свободна И никто другой её ещё не занял в этой фазе
                 if (unit != null && unit.gameObject.activeSelf &&
-                    targetCell.mCurrentPiece == null &&
-                    !reservedCells.Contains(targetCell.mBoardPosition))
+                    targetCell.mCurrentPiece == null)
                 {
-                    // Резервируем клетку
-                    reservedCells.Add(targetCell.mBoardPosition);
                     unit.MoveToCell(targetCell);
                 }
             }
 
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.2f);
 
-            // === ФАЗА 3: АТАКА (с одновременным уроном) ===
-            // Сначала собираем весь урон, потом применяем (чтобы атаки были истинно одновременными)
-            Dictionary<BasePiece, int> damageToApply = new Dictionary<BasePiece, int>();
-
+            // Р¤РђР—Рђ 3: РђРўРђРљРђ (РєР°Р¶РґС‹Р№ Р°С‚Р°РєСѓРµС‚ СЃРІРѕСЋ С†РµР»СЊ РћР”РРќ СЂР°Р·)
             foreach (var kvp in attacks)
             {
                 BasePiece attacker = kvp.Key;
                 BasePiece defender = kvp.Value;
 
-                // Проверяем живучесть и дальность
                 if (attacker != null && attacker.gameObject.activeSelf &&
                     defender != null && defender.gameObject.activeSelf &&
                     attacker.CanAttackTarget(defender))
                 {
-                    if (!damageToApply.ContainsKey(defender))
-                        damageToApply[defender] = 0;
-
-                    damageToApply[defender] += attacker.damage;
-                    Debug.Log($"{attacker.name} (ID:{attacker.unitID}) атакует {defender.name} (ID:{defender.unitID}) на {attacker.damage} урона");
-                }
-            }
-
-            // Применяем урон одновременно
-            foreach (var kvp in damageToApply)
-            {
-                BasePiece defender = kvp.Key;
-                int totalDamage = kvp.Value;
-
-                if (defender != null && defender.gameObject.activeSelf)
-                {
-                    defender.TakeDamage(totalDamage);
+                    attacker.AttackTarget(defender);
                 }
             }
 
             yield return new WaitForSeconds(turnDelay);
         }
 
-        // Объявляем победителя
         if (mMyMinis.Count > 0)
-            Debug.Log("=== ПОБЕДА ИГРОКА! ===");
+            Debug.Log("=== РџРћР‘Р•Р”Рђ РР“Р РћРљРђ! ===");
         else if (mEnemyMinis.Count > 0)
-            Debug.Log("=== ПОБЕДА ВРАГА! ===");
+            Debug.Log("=== РџРћР‘Р•Р”Рђ Р’Р РђР“Рђ! ===");
         else
-            Debug.Log("=== НИЧЬЯ! ===");
+            Debug.Log("=== РќРР§Р¬РЇ! ===");
 
         mBattleInProgress = false;
     }
@@ -192,5 +150,20 @@ public class PieceManager : MonoBehaviour
     public List<BasePiece> GetActiveUnits()
     {
         return GetAliveUnits();
+    }
+
+    public void StartBattle()
+    {
+        if (mBattleInProgress) return;
+        IsBattleActive = true;
+        mBattleInProgress = true;
+        BasePiece.DisableAllDrag();                      // Р±Р»РѕРєРёСЂСѓРµРј РґСЂР°Рі
+        StartCoroutine(BattleLoop());
+    }
+
+    private void CleanDeadUnits()
+    {
+        mMyMinis.RemoveAll(unit => unit == null || !unit.gameObject.activeSelf);
+        mEnemyMinis.RemoveAll(unit => unit == null || !unit.gameObject.activeSelf);
     }
 }
