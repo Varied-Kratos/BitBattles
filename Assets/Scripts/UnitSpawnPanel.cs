@@ -55,18 +55,21 @@ public class UnitSpawnButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (BasePiece.sBattleStarted) return;   // ← добавить
-        if (PieceManager.IsBattleActive) return;
+        if (BasePiece.sBattleStarted) return;
+
         if (mDraggedUnit != null)
         {
             Cell targetCell = FindCellUnderMouse();
 
             if (targetCell != null && targetCell.mCurrentPiece == null)
             {
-                // Проверка стороны
                 if (teamColor == Color.white && targetCell.mBoardPosition.y >= 5)
                 {
                     Debug.Log("Нельзя ставить на вражескую половину!");
+                }
+                else if (!CanAffordUnit())
+                {
+                    Debug.Log("Недостаточно эликсира!");
                 }
                 else
                 {
@@ -78,19 +81,29 @@ public class UnitSpawnButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
         }
     }
 
-    private Cell FindCellUnderMouse()
+    private bool CanAffordUnit()
     {
-        Cell[] cells = FindObjectsOfType<Cell>();
-        foreach (Cell cell in cells)
+        PieceManager pm = FindObjectOfType<PieceManager>();
+        if (pm == null) return false;
+
+        switch (unitType)
         {
-            if (cell.mRectTransform != null &&
-                RectTransformUtility.RectangleContainsScreenPoint(
-                cell.mRectTransform, Input.mousePosition))
-            {
-                return cell;
-            }
+            case "Knight": return pm.CanAfford(3);
+            case "Archer": return pm.CanAfford(2);
+            case "Mage": return pm.CanAfford(4);
+            default: return false;
         }
-        return null;
+    }
+
+    private int GetUnitCost()
+    {
+        switch (unitType)
+        {
+            case "Knight": return 3;
+            case "Archer": return 2;
+            case "Mage": return 4;
+            default: return 0;
+        }
     }
 
     private void SpawnUnit(Cell cell)
@@ -109,8 +122,26 @@ public class UnitSpawnButton : MonoBehaviour, IBeginDragHandler, IDragHandler, I
 
             if (type != null)
             {
-                pm.SpawnUnit(type, teamColor, unitColor, cell.mBoardPosition, true);
+                int cost = GetUnitCost();
+                if (pm.SpendElixir(cost))
+                {
+                    pm.SpawnUnit(type, teamColor, unitColor, cell.mBoardPosition, true);
+                }
             }
         }
+    }
+    private Cell FindCellUnderMouse()
+    {
+        Cell[] cells = FindObjectsOfType<Cell>();
+        foreach (Cell cell in cells)
+        {
+            if (cell.mRectTransform != null &&
+                RectTransformUtility.RectangleContainsScreenPoint(
+                cell.mRectTransform, Input.mousePosition))
+            {
+                return cell;
+            }
+        }
+        return null;
     }
 }

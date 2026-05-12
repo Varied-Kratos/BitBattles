@@ -123,9 +123,19 @@ public abstract class BasePiece : EventTrigger
 
         ClearHighlights();
 
+        // Проверяем, попал ли юнит в зону продажи
+        if (eventData.pointerEnter != null)
+        {
+            SellZone sellZone = eventData.pointerEnter.GetComponent<SellZone>();
+            if (sellZone != null)
+            {
+                // Продажа обрабатывается в SellZone.OnDrop
+                return;
+            }
+        }
+
         if (mTargetCell != null)
         {
-            // Финальная проверка стороны по имени
             bool isPlayer = name.Contains("Player");
             if (isPlayer && mTargetCell.mBoardPosition.y >= 5)
             {
@@ -148,9 +158,6 @@ public abstract class BasePiece : EventTrigger
                 transform.position = mCurrentCell.transform.position;
         }
     }
-
- 
-
 
     private void ClearHighlights()
     {
