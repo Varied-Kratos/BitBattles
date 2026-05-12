@@ -20,4 +20,13 @@ public class GameManager : MonoBehaviour
             mPieceManager.Setup(mBoard);
         }
     }
+
+    void Update()
+    {
+        // Запуск боя по нажатию пробела (для теста)
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            mPieceManager.StartBattle();
+        }
+    }
 }
