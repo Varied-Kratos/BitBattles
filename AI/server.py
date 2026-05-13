@@ -1,33 +1,49 @@
 import socket
-import numpy as np
+from ga_manager import GAManager
+
+HOST = '127.0.0.1'
+PORT = 5005
 
 def start_server():
-    host = '127.0.0.1'
-    port = 5005
+    # Инициализируем мозги ИИ
+    ga = GAManager(pop_size=10, max_elixir=10)
+    current_ind_idx = 0
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((host, port))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind((HOST, PORT))
         s.listen()
-        print(f"QBIT Server online! Ждем данные на порту {port}...")
-        
+        print(f"BITBATTLES AI SERVER ONLINE | PORT {PORT}")
+
         while True:
             conn, addr = s.accept()
             with conn:
-                data = conn.recv(4096) # Буфер побольше для 100 чисел
+                data = conn.recv(4096)
                 if not data: break
                 
-                # Декодируем строку и превращаем обратно в массив float
-                raw_string = data.decode()
-                board_array = np.fromstring(raw_string, sep=',')
-                
-                print(f"Получена доска! Размер: {len(board_array)}")
-                print(f"Первые 5 значений: {board_array[:5]}")
-                
-                # Тут будет вызов твоей модели PyTorch
-                # response = model.predict(board_array)
-                response = "15" # Заглушка: ИИ говорит ходить на 15-ю клетку
-                
-                conn.sendall(response.encode())
+                message = data.decode()
+                try:
+                    # Парсим "RESULT:фитнес|доска"
+                    parts = message.split('|')
+                    raw_fit = float(parts[0].split(':')[1])
+                    
+                    # Применяем фитнес со штрафом за эликсир
+                    cost, final_fit = ga.set_fitness(current_ind_idx, raw_fit)
+                    
+                    print(f"IND {current_ind_idx} | Raw: {raw_fit:.1f} | Final: {final_fit:.1f} | Elixir: {cost}/{ga.max_elixir}")
+                    
+                    current_ind_idx += 1
+                except (IndexError, ValueError):
+                    print("Initial request received (New Battle)")
+
+                # Если прошли всю популяцию — эволюционируем
+                if current_ind_idx >= ga.pop_size:
+                    ga.evolve()
+                    current_ind_idx = 0
+
+                # Отправляем новый лейаут Unity
+                next_layout = ",".join(map(str, ga.get_individual(current_ind_idx)))
+                conn.sendall(next_layout.encode())
 
 if __name__ == "__main__":
     start_server()

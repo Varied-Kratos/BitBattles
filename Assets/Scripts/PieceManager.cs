@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 [System.Serializable]
 public struct UnitSpawnCommand {
@@ -15,6 +16,10 @@ public struct UnitSpawnCommand {
 
 public class PieceManager : MonoBehaviour
 {
+    [Header("Unit Prefabs")]
+    public BasePiece knightPrefab;
+    public BasePiece archerPrefab;
+    public BasePiece magePrefab;
     public GameObject mPiecePrefab;
     public List<BasePiece> mMyMinis = new List<BasePiece>();
     public List<BasePiece> mEnemyMinis = new List<BasePiece>();
@@ -59,7 +64,7 @@ public class PieceManager : MonoBehaviour
         currentElixir = maxElixir;
         UpdateElixirUI();
         UpdateScoreUI();
-        SetupFirstRound();
+        FindObjectOfType<PythonConnector>().RequestNextLayout(0);
     }
 
     public void Setup(Board board)
@@ -160,7 +165,7 @@ public class PieceManager : MonoBehaviour
         Debug.Log($"Сохранено {savedPlayerUnits.Count} юнитов игрока");
     }
 
-    private void RestorePlayerUnits()
+   private void RestorePlayerUnits()
     {
         foreach (var data in savedPlayerUnits)
         {
@@ -172,22 +177,17 @@ public class PieceManager : MonoBehaviour
                 case "Mage": type = typeof(Mage); break;
             }
 
-            if (type != null)
+            if (type != null && mBoard.mAllCells[data.position.x, data.position.y].mCurrentPiece == null)
             {
-                // Проверяем, что клетка свободна
-                if (mBoard.mAllCells[data.position.x, data.position.y].mCurrentPiece == null)
+                // Теперь мы точно знаем, какой юнит получили
+                BasePiece piece = SpawnUnit(type, Color.white, GetColorForType(data.unitType), data.position, true);
+                if (piece != null)
                 {
-                    SpawnUnit(type, Color.white, GetColorForType(data.unitType), data.position, true);
-
-                    // Восстанавливаем HP
-                    BasePiece piece = mMyMinis[mMyMinis.Count - 1];
                     piece.currentHP = data.currentHP;
                 }
             }
         }
-        Debug.Log($"Восстановлено {mMyMinis.Count} юнитов игрока");
     }
-
     private Color32 GetColorForType(string type)
     {
         switch (type)
@@ -288,6 +288,7 @@ public class PieceManager : MonoBehaviour
         int maxRounds = 50;
         int roundCount = 0;
 
+        // --- ФАЗА БОЯ ---
         while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0 && roundCount < maxRounds)
         {
             roundCount++;
@@ -326,32 +327,50 @@ public class PieceManager : MonoBehaviour
             yield return new WaitForSeconds(turnDelay);
         }
 
-        // Определяем победителя раунда
+        // --- ЗАВЕРШЕНИЕ БОЯ ---
         if (mMyMinis.Count > 0 && mEnemyMinis.Count == 0)
             playerWins++;
         else if (mEnemyMinis.Count > 0 && mMyMinis.Count == 0)
             enemyWins++;
 
-        Debug.Log($"Раунд завершён! Игрок {playerWins} - {enemyWins} Враг");
         UpdateScoreUI();
         mBattleInProgress = false;
         IsBattleActive = false;
 
-        // ПРОВЕРКА НА КОНЕЦ СЕРИИ
+        // Считаем фитнес
+        float enemyHP = mEnemyMinis.Sum(u => u != null ? u.currentHP : 0);
+        float playerHP = mMyMinis.Sum(u => u != null ? u.currentHP : 0);
+        float fitnessScore = (enemyHP + 1f) / (playerHP + 1f); 
+
+        // Проверка конца игры (Best of 5)
         if (playerWins >= winsToWin || enemyWins >= winsToWin)
         {
-            Debug.Log($"СЕРИЯ ЗАВЕРШЕНА! Игрок {playerWins} - {enemyWins} Враг");
+            FindObjectOfType<PythonConnector>().RequestNextLayout(fitnessScore);
             EndSeries();
-            yield break; // ВЫХОДИМ из корутины полностью
+            yield break; 
         }
 
-        // Иначе готовим следующий раунд
+        // --- ПОДГОТОВКА К СЛЕДУЮЩЕМУ РАУНДУ ---
         currentRound++;
         yield return new WaitForSeconds(2f);
         UpdateScoreUI();
-        SetupNextRound();
-    }
 
+        // 1. ОЧИСТКА И ВОССТАНОВЛЕНИЕ
+        ClearEnemies();
+        mMyMinis.Clear(); // Обязательно чистим список, чтобы RestorePlayerUnits заполнил его заново
+        RestorePlayerUnits();
+
+        // 2. РАЗБЛОКИРОВКА ПЕРЕТАСКИВАНИЯ (ВОТ ЧТО ТЫ ЗАБЫЛ)
+        BasePiece.sBattleStarted = false; // Теперь во 2 раунде OnDrag заработает!
+
+        // 3. ЭЛИКСИР И ЗАПРОС К PYTHON
+        int elixirBonus = 4;
+        currentElixir = Mathf.Min(currentElixir + elixirBonus, maxElixir);
+        UpdateElixirUI();
+        
+        // Запрашиваем новую расстановку врагов
+        FindObjectOfType<PythonConnector>().RequestNextLayout(fitnessScore);
+    }   
     private void EndSeries()
     {
         Debug.Log($"EndSeries вызван! playerWins={playerWins}, enemyWins={enemyWins}");
@@ -385,24 +404,60 @@ public class PieceManager : MonoBehaviour
         SetupFirstRound();
     }
 
-    public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
+   public BasePiece SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
     {
-        GameObject newPieceObject = Instantiate(mPiecePrefab);
-        newPieceObject.transform.SetParent(transform, false);
+        // 1. Находим нужную клетку
+        Cell targetCell = mBoard.mAllCells[pos.x, pos.y];
+        
+        // 2. Определяем префаб-шаблон для копирования данных
+        BasePiece template = null;
+        if (unitType == typeof(Knight)) template = knightPrefab;
+        else if (unitType == typeof(Archer)) template = archerPrefab;
+        else if (unitType == typeof(Mage)) template = magePrefab;
+
+        if (template == null) {
+            Debug.LogError($"Префаб для типа {unitType.Name} не назначен в инспекторе PieceManager!");
+            return null;
+        }
+
+        // 3. Создаем объект из базового mPiecePrefab
+        GameObject newPieceObject = Instantiate(mPiecePrefab, targetCell.transform);
+        newPieceObject.transform.localPosition = Vector3.zero;
         newPieceObject.transform.localScale = Vector3.one;
+        newPieceObject.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
 
-        CanvasRenderer cr = newPieceObject.GetComponent<CanvasRenderer>();
-        if (cr != null) cr.cullTransparentMesh = false;
+        // 4. Настраиваем визуал (Спрайт) ДО добавления скрипта
+        Image targetImage = newPieceObject.GetComponent<Image>();
+        Image templateImage = template.GetComponent<Image>();
+        if (targetImage != null && templateImage != null) {
+            targetImage.sprite = templateImage.sprite;
+        }
 
+        // 5. Добавляем компонент и КОПИРУЕМ статы из шаблона
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
-        newPiece.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
-        newPiece.Setup(teamColor, spriteColor, this);
-        newPiece.Place(mBoard.mAllCells[pos.x, pos.y]);
+        
+        // Копируем боевые характеристики, чтобы не было HP = 0
+        newPiece.maxHP = template.maxHP;
+        newPiece.currentHP = template.maxHP; // Сразу полное здоровье
+        newPiece.damage = template.damage;
+        newPiece.attackRange = template.attackRange;
+        newPiece.attackSpeed = template.attackSpeed;
+        newPiece.unitID = template.unitID;
 
-        if (isPlayer) mMyMinis.Add(newPiece);
-        else mEnemyMinis.Add(newPiece);
+        // 6. Инициализация (команда, цвет, ссылки)
+        newPiece.Setup(isPlayer, teamColor, spriteColor, this);
+        
+        // 7. РЕГИСТРАЦИЯ
+        newPiece.Place(targetCell);
+
+        // 8. ДОБАВЛЕНИЕ В СПИСКИ
+        if (isPlayer) 
+            mMyMinis.Add(newPiece);
+        else 
+            mEnemyMinis.Add(newPiece);
+
+        return newPiece;
     }
-
     private void CleanDeadUnits()
     {
         mMyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
@@ -428,5 +483,69 @@ public class PieceManager : MonoBehaviour
         // Обнуляем списки
         mMyMinis.Clear();
         mEnemyMinis.Clear();
+    }
+    public void ClearEnemies()
+    {
+        foreach (BasePiece unit in mEnemyMinis)
+        {
+            if (unit != null)
+            {
+                // Убираем ссылку на фигуру из клетки, чтобы она считалась пустой
+                if (unit.mCurrentCell != null)
+                {
+                    unit.mCurrentCell.mCurrentPiece = null;
+                }
+                Destroy(unit.gameObject);
+            }
+        }
+        mEnemyMinis.Clear();
+    }
+
+    public void SpawnEnemyLayout(string data)
+    {
+        // 1. Очищаем только врагов и верхнюю часть доски
+        ClearEnemies(); 
+
+        string[] values = data.Split(',');
+        
+        for (int i = 0; i < values.Length; i++)
+        {
+            if (i >= 25) break; // Защита от переполнения (5x5 зона врага)
+
+            int unitType = int.Parse(values[i]);
+            if (unitType == 0) continue;
+
+            int x = i % 5;
+            int y = (i / 5) + 5; // Вражеская зона: y = 5, 6, 7, 8, 9
+
+            Type t = GetTypeByID(unitType);
+            if (t == null) continue;
+
+            Color32 col = GetColorByUnitType(unitType);
+            
+            // Перед спавном проверяем, не занята ли клетка (на всякий случай)
+            if (mBoard.mAllCells[x, y].mCurrentPiece == null)
+            {
+                SpawnUnit(t, Color.black, col, new Vector2Int(x, y), false);
+            }
+        }
+    }
+
+// Вспомогательный метод для выбора типа
+    private Type GetTypeByID(int id)
+    {
+        if (id == 1) return typeof(Knight);
+        if (id == 2) return typeof(Archer);
+        if (id == 3) return typeof(Mage);
+        return null;
+    }
+
+    // Вспомогательный метод для цвета (чтобы не были просто красными квадратами)
+    private Color32 GetColorByUnitType(int id)
+    {
+        if (id == 1) return new Color32(210, 95, 64, 255); // Knight
+        if (id == 2) return new Color32(200, 50, 50, 255); // Archer
+        if (id == 3) return new Color32(180, 50, 180, 255); // Mage
+        return Color.white;
     }
 }

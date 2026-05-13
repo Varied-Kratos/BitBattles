@@ -2,7 +2,8 @@ using UnityEngine;
 
 public class Archer : BasePiece
 {
-    public override void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
+    // Добавляем bool isPlayer в аргументы
+    public override void Setup(bool isPlayer, Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
         unitID = 2;
         maxHP = 8;
@@ -12,6 +13,10 @@ public class Archer : BasePiece
         movementSpeed = 1.0f;
         cost = 2;
 
-        base.Setup(newTeamColor, newSpriteColor, newPieceManager);
+        // Передаем isPlayer первым аргументом
+        base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
+        
+        // Инициализируем здоровье
+        currentHP = maxHP;
     }
 }

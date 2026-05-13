@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Knight : BasePiece
 {
-    public override void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
+    public override void Setup(bool isPlayer, Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
         unitID = 1;
         maxHP = 15;
@@ -12,6 +12,10 @@ public class Knight : BasePiece
         movementSpeed = 1.0f;
         cost = 3;
 
-        base.Setup(newTeamColor, newSpriteColor, newPieceManager);
+        // Передаем все 4 аргумента в базовый класс
+        base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
+        
+        // Инициализируем текущее здоровье после установки maxHP
+        currentHP = maxHP; 
     }
 }

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 public abstract class BasePiece : EventTrigger
 {
+    [HideInInspector] public bool mIsPlayer; // Определяет команду
+    protected Image mMainImage;
     [HideInInspector] public Color mColor = Color.clear;
     public bool mIsFirstMove = true;
 
@@ -31,15 +33,27 @@ public abstract class BasePiece : EventTrigger
     private HealthBar mHealthBar;
     private CanvasGroup mCanvasGroup;
     public static bool sBattleStarted = false;
-
-    public virtual void Setup(Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
+    protected virtual void Awake()
     {
-        mPieceManager = newPieceManager;
-        mColor = newTeamColor;
-        GetComponent<Image>().color = newSpriteColor;
+        mMainImage = GetComponent<Image>();
         mRectTransform = GetComponent<RectTransform>();
-        mCanvasGroup = GetComponent<CanvasGroup>();
-        currentHP = maxHP;
+    }
+    public virtual void Setup(bool isPlayer, Color teamColor, Color32 spriteColor, PieceManager manager)
+    {
+        mIsPlayer = isPlayer; // Убедись, что эта переменная объявлена в классе
+        mPieceManager = manager;
+        
+        // Настройка визуала
+        if (mMainImage != null) // Или GetComponent<Image>()
+        {
+            mMainImage.color = spriteColor;
+        }
+        
+        // Если у тебя есть логика поворота спрайта для врага:
+        if (!mIsPlayer)
+        {
+            transform.localRotation = Quaternion.Euler(0, 0, 180); // Разворачиваем врага к игроку
+        }
         CreateHealthBar();
     }
 
@@ -70,9 +84,9 @@ public abstract class BasePiece : EventTrigger
         ClearHighlights();
         foreach (Cell cell in mPieceManager.mBoard.mAllCells)
         {
-            // Только своя половина
-            if (mColor == Color.white && cell.mBoardPosition.y >= 5) continue;
-            if (mColor == Color.black && cell.mBoardPosition.y < 5) continue;
+            // Используем mIsPlayer вместо цвета для логики зон
+            if (mIsPlayer && cell.mBoardPosition.y >= 5) continue; 
+            if (!mIsPlayer && cell.mBoardPosition.y < 5) continue;
 
             if (mPieceManager.mBoard.ValidateCell(cell.mBoardPosition.x, cell.mBoardPosition.y, this) == CellState.Free)
             {
@@ -175,7 +189,7 @@ public abstract class BasePiece : EventTrigger
         List<BasePiece> enemies;
 
         // Определяем врагов по имени
-        if (name.Contains("Player"))
+        if (mIsPlayer)
             enemies = mPieceManager.mEnemyMinis;
         else
             enemies = mPieceManager.mMyMinis;
@@ -228,8 +242,10 @@ public abstract class BasePiece : EventTrigger
     public virtual void Die()
     {
         Debug.Log($"{name} погибает");
-        if (mColor == Color.white) mPieceManager.mMyMinis.Remove(this);
+        // Используем mIsPlayer вместо mColor
+        if (mIsPlayer) mPieceManager.mMyMinis.Remove(this);
         else mPieceManager.mEnemyMinis.Remove(this);
+        
         if (mCurrentCell != null) mCurrentCell.mCurrentPiece = null;
         Destroy(gameObject);
     }
@@ -296,5 +312,23 @@ public abstract class BasePiece : EventTrigger
 
         mHealthBar = healthBarObj.AddComponent<HealthBar>();
         mHealthBar.Setup(this);
+    }
+    public override void OnPointerDown(PointerEventData eventData)
+    {
+        base.OnPointerDown(eventData);
+        if (sBattleStarted) return;
+
+        mOriginalCell = mCurrentCell;
+        // Перемещаем в конец иерархии, чтобы юнит был ПОВЕРХ всех остальных при таскании
+        transform.SetAsLastSibling(); 
+    }
+
+    public override void OnBeginDrag(PointerEventData eventData)
+    {
+        base.OnBeginDrag(eventData);
+        if (sBattleStarted) return;
+
+        // Показываем клетки, куда можно ставить (свою половину)
+        ShowValidCells();
     }
 }
