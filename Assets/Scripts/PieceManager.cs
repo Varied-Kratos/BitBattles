@@ -1,7 +1,9 @@
-using System;
+п»їusing System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using TMPro;
 
 [System.Serializable]
 public struct UnitSpawnCommand {
@@ -14,192 +16,405 @@ public struct UnitSpawnCommand {
 public class PieceManager : MonoBehaviour
 {
     public GameObject mPiecePrefab;
-
     public List<BasePiece> mMyMinis = new List<BasePiece>();
     public List<BasePiece> mEnemyMinis = new List<BasePiece>();
-
-    private Board mBoard;
+    public Board mBoard;
 
     [Header("Battle Settings")]
     public float turnDelay = 1.0f;
     private bool mBattleInProgress = false;
 
+    [Header("Elixir System")]
+    public int maxElixir = 10;
+    public int currentElixir;
+    public TextMeshProUGUI elixirText;
+
+    [Header("Best of 5")]
+    public int playerWins = 0;
+    public int enemyWins = 0;
+    public int winsToWin = 3;
+    public int currentRound = 1;
+    public TextMeshProUGUI roundText;
+    public TextMeshProUGUI scoreText;
+    public GameObject victoryPanel;
+    public GameObject defeatPanel;
+    public TextMeshProUGUI finalScoreText;
+
+    public static bool IsBattleActive { get; private set; }
+
+    // РЎРѕС…СЂР°РЅСЏРµРј РїРѕР·РёС†РёРё РІС‹Р¶РёРІС€РёС… СЋРЅРёС‚РѕРІ РёРіСЂРѕРєР°
+    private List<SavedUnitData> savedPlayerUnits = new List<SavedUnitData>();
+
+    [System.Serializable]
+    private class SavedUnitData
+    {
+        public string unitType;
+        public Vector2Int position;
+        public int currentHP;
+        public int maxHP;
+    }
+
+    void Start()
+    {
+        currentElixir = maxElixir;
+        UpdateElixirUI();
+        UpdateScoreUI();
+        SetupFirstRound();
+    }
+
     public void Setup(Board board)
     {
         mBoard = board;
-
-        // Игрок (белые)
-        SpawnUnit(typeof(Knight), Color.white, new Color32(80, 124, 159, 255), new Vector2Int(2, 0));
-        SpawnUnit(typeof(Archer), Color.white, new Color32(80, 200, 100, 255), new Vector2Int(1, 0));
-        SpawnUnit(typeof(Mage), Color.white, new Color32(200, 80, 200, 255), new Vector2Int(3, 0));
-
-        // Противник (чёрные)
-        SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9));
-        SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9));
-        SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9));
     }
 
-    public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos)
+    // РџРµСЂРІС‹Р№ СЂР°СѓРЅРґ вЂ” С‡РёСЃС‚С‹Р№ СЃС‚Р°СЂС‚
+    public void SetupFirstRound()
     {
-        GameObject newPieceObject = Instantiate(mPiecePrefab);
-        newPieceObject.transform.SetParent(transform);
-        newPieceObject.transform.localScale = Vector3.one;
+        ClearAllUnits();
+        savedPlayerUnits.Clear();
 
-        BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
-        newPiece.name = $"{unitType.Name}_{teamColor}";
+        // Р‘Р°Р·РѕРІС‹Рµ РІСЂР°РіРё
+        SpawnEnemiesForRound(1);
 
-        newPiece.Setup(teamColor, spriteColor, this);
-        newPiece.Place(mBoard.mAllCells[pos.x, pos.y]);
+        currentElixir = maxElixir;
+        UpdateElixirUI();
 
-        if (teamColor == Color.white)
-            mMyMinis.Add(newPiece);
-        else
-            mEnemyMinis.Add(newPiece);
+        BasePiece.sBattleStarted = false;
+        IsBattleActive = false;
+        mBattleInProgress = false;
     }
 
+    // РќРѕРІС‹Р№ СЂР°СѓРЅРґ вЂ” СЃРѕС…СЂР°РЅСЏРµРј РёРіСЂРѕРєР°, СЃРїР°РІРЅРёРј РЅРѕРІС‹С… РІСЂР°РіРѕРІ
+    // РќРѕРІС‹Р№ РјРµС‚РѕРґ: СЃРѕС…СЂР°РЅРёС‚СЊ РІСЃРµС… С‚РµРєСѓС‰РёС… РёРіСЂРѕРєРѕРІ РїРµСЂРµРґ Р±РѕРµРј
+    private void SavePlayerUnitsBeforeBattle()
+    {
+        savedPlayerUnits.Clear();
+        foreach (var unit in mMyMinis)
+        {
+            if (unit != null && unit.gameObject.activeSelf && unit.mCurrentCell != null)
+            {
+                savedPlayerUnits.Add(new SavedUnitData
+                {
+                    unitType = unit.GetType().Name,
+                    position = unit.mCurrentCell.mBoardPosition,
+                    currentHP = unit.currentHP,
+                    maxHP = unit.maxHP
+                });
+            }
+        }
+        Debug.Log($"РЎРѕС…СЂР°РЅРµРЅРѕ РїРµСЂРµРґ Р±РѕРµРј: {savedPlayerUnits.Count} СЋРЅРёС‚РѕРІ");
+    }
+
+    public void SetupNextRound()
+    {
+        // РћС‡РёС‰Р°РµРј РїРѕР»Рµ
+        ClearAllUnits();
+
+        // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹С… СЋРЅРёС‚РѕРІ
+        RestorePlayerUnits();
+
+        // РЎРїР°РІРЅРёРј РІСЂР°РіРѕРІ
+        SpawnEnemiesForRound(currentRound);
+
+        // РџРѕРїРѕР»РЅСЏРµРј СЌР»РёРєСЃРёСЂ
+        int elixirBonus = 4;
+        currentElixir += elixirBonus;
+        if (currentElixir > maxElixir) currentElixir = maxElixir;
+        UpdateElixirUI();
+
+        BasePiece.sBattleStarted = false;
+        IsBattleActive = false;
+        mBattleInProgress = false;
+    }
+
+    // РџРµСЂРµРґ СЃС‚Р°СЂС‚РѕРј Р±РѕСЏ СЃРѕС…СЂР°РЅСЏРµРј СЋРЅРёС‚РѕРІ
     public void StartBattle()
     {
-        if (!mBattleInProgress)
+        if (mBattleInProgress) return;
+
+        // РЎРћРҐР РђРќРЇР•Рњ РїРµСЂРµРґ Р±РѕРµРј!
+        SavePlayerUnitsBeforeBattle();
+
+        mBattleInProgress = true;
+        IsBattleActive = true;
+        BasePiece.DisableAllDrag();
+        StartCoroutine(BattleLoop());
+    }
+
+    private void SavePlayerUnits()
+    {
+        savedPlayerUnits.Clear();
+        foreach (var unit in mMyMinis)
         {
-            mBattleInProgress = true;
-            StartCoroutine(BattleLoop());
+            if (unit != null && unit.gameObject.activeSelf)
+            {
+                savedPlayerUnits.Add(new SavedUnitData
+                {
+                    unitType = unit.GetType().Name,
+                    position = unit.mCurrentCell.mBoardPosition,
+                    currentHP = unit.currentHP,
+                    maxHP = unit.maxHP
+                });
+            }
         }
+        Debug.Log($"РЎРѕС…СЂР°РЅРµРЅРѕ {savedPlayerUnits.Count} СЋРЅРёС‚РѕРІ РёРіСЂРѕРєР°");
+    }
+
+    private void RestorePlayerUnits()
+    {
+        foreach (var data in savedPlayerUnits)
+        {
+            Type type = null;
+            switch (data.unitType)
+            {
+                case "Knight": type = typeof(Knight); break;
+                case "Archer": type = typeof(Archer); break;
+                case "Mage": type = typeof(Mage); break;
+            }
+
+            if (type != null)
+            {
+                // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РєР»РµС‚РєР° СЃРІРѕР±РѕРґРЅР°
+                if (mBoard.mAllCells[data.position.x, data.position.y].mCurrentPiece == null)
+                {
+                    SpawnUnit(type, Color.white, GetColorForType(data.unitType), data.position, true);
+
+                    // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј HP
+                    BasePiece piece = mMyMinis[mMyMinis.Count - 1];
+                    piece.currentHP = data.currentHP;
+                }
+            }
+        }
+        Debug.Log($"Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРѕ {mMyMinis.Count} СЋРЅРёС‚РѕРІ РёРіСЂРѕРєР°");
+    }
+
+    private Color32 GetColorForType(string type)
+    {
+        switch (type)
+        {
+            case "Knight": return new Color32(80, 124, 159, 255);
+            case "Archer": return new Color32(80, 200, 100, 255);
+            case "Mage": return new Color32(200, 80, 200, 255);
+            default: return new Color32(200, 200, 200, 255);
+        }
+    }
+
+    private void SpawnEnemiesForRound(int round)
+    {
+        // РЎ РєР°Р¶РґС‹Рј СЂР°СѓРЅРґРѕРј РІСЂР°РіРѕРІ Р±РѕР»СЊС€Рµ
+        switch (round)
+        {
+            case 1:
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
+                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
+                break;
+            case 2:
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(1, 8), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
+                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
+                break;
+            case 3:
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(1, 8), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(3, 9), false);
+                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
+                break;
+            default: // 4 Рё 5 СЂР°СѓРЅРґС‹
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(0, 8), false);
+                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(4, 8), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(1, 9), false);
+                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(3, 9), false);
+                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(2, 8), false);
+                break;
+        }
+    }
+
+    private void ClearAllUnits()
+    {
+        foreach (var unit in mMyMinis.ToArray())
+            if (unit != null && unit.gameObject != null) Destroy(unit.gameObject);
+        foreach (var unit in mEnemyMinis.ToArray())
+            if (unit != null && unit.gameObject != null) Destroy(unit.gameObject);
+        mMyMinis.Clear();
+        mEnemyMinis.Clear();
+
+        if (mBoard != null)
+            for (int x = 0; x < 5; x++)
+                for (int y = 0; y < 10; y++)
+                    if (mBoard.mAllCells[x, y] != null)
+                        mBoard.mAllCells[x, y].mCurrentPiece = null;
+    }
+
+    public bool CanAfford(int cost) => currentElixir >= cost;
+
+    public bool SpendElixir(int cost)
+    {
+        if (CanAfford(cost))
+        {
+            currentElixir -= cost;
+            UpdateElixirUI();
+            return true;
+        }
+        return false;
+    }
+
+    public void RefundElixir(int cost)
+    {
+        currentElixir += cost;
+        if (currentElixir > maxElixir) currentElixir = maxElixir;
+        UpdateElixirUI();
+    }
+
+    private void UpdateElixirUI()
+    {
+        if (elixirText != null)
+            elixirText.text = $"рџ’§ {currentElixir}/{maxElixir}";
+    }
+
+    private void UpdateScoreUI()
+    {
+        if (scoreText != null)
+            scoreText.text = $"РРіСЂРѕРє {playerWins} - {enemyWins} Р’СЂР°Рі";
+        if (roundText != null)
+            roundText.text = $"Р Р°СѓРЅРґ {currentRound}/5";
     }
 
     private IEnumerator BattleLoop()
     {
-        Debug.Log("=== БОЙ НАЧАЛСЯ ===");
+        int maxRounds = 50;
+        int roundCount = 0;
 
-        while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0)
+        while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0 && roundCount < maxRounds)
         {
-            // === ФАЗА 1: ВСЕ ВЫБИРАЮТ ЦЕЛИ ===
+            roundCount++;
+            CleanDeadUnits();
             List<BasePiece> allUnits = GetAliveUnits();
 
-            // Словарь: кто кого атакует
             Dictionary<BasePiece, BasePiece> attacks = new Dictionary<BasePiece, BasePiece>();
-            // Словарь: кто в какую клетку хочет пойти
             Dictionary<BasePiece, Cell> desiredMoves = new Dictionary<BasePiece, Cell>();
 
             foreach (BasePiece unit in allUnits)
             {
+                if (unit == null || !unit.gameObject.activeSelf) continue;
                 BasePiece enemy = unit.FindNearestEnemy();
-                if (enemy == null) continue;
+                if (enemy == null || !enemy.gameObject.activeSelf) continue;
 
                 if (unit.CanAttackTarget(enemy))
-                {
                     attacks[unit] = enemy;
-                }
                 else
                 {
                     Cell nextCell = unit.GetCellTowardsTarget(enemy);
-                    if (nextCell != null)
-                    {
+                    if (nextCell != null && nextCell.mCurrentPiece == null)
                         desiredMoves[unit] = nextCell;
-                    }
                 }
             }
 
-            // === ФАЗА 2: ДВИЖЕНИЕ (с проверкой конфликтов) ===
-            // Сортируем движения по расстоянию до цели (кто ближе — тот первый занимает клетку)
-            List<KeyValuePair<BasePiece, Cell>> sortedMoves = new List<KeyValuePair<BasePiece, Cell>>(desiredMoves);
-            sortedMoves.Sort((a, b) =>
-            {
-                BasePiece enemyA = a.Key.FindNearestEnemy();
-                BasePiece enemyB = b.Key.FindNearestEnemy();
-                if (enemyA == null || enemyB == null) return 0;
+            foreach (var kvp in desiredMoves)
+                if (kvp.Key != null && kvp.Key.gameObject.activeSelf && kvp.Value.mCurrentPiece == null)
+                    kvp.Key.MoveToCell(kvp.Value);
 
-                float distA = Vector2Int.Distance(a.Key.mCurrentCell.mBoardPosition, enemyA.mCurrentCell.mBoardPosition);
-                float distB = Vector2Int.Distance(b.Key.mCurrentCell.mBoardPosition, enemyB.mCurrentCell.mBoardPosition);
-                return distA.CompareTo(distB);
-            });
-
-            // Множество занятых клеток (клетки, куда уже кто-то пошёл)
-            HashSet<Vector2Int> reservedCells = new HashSet<Vector2Int>();
-
-            foreach (var kvp in sortedMoves)
-            {
-                BasePiece unit = kvp.Key;
-                Cell targetCell = kvp.Value;
-
-                // Проверяем, что:
-                // 1. Юнит ещё жив
-                // 2. Клетка свободна И никто другой её ещё не занял в этой фазе
-                if (unit != null && unit.gameObject.activeSelf &&
-                    targetCell.mCurrentPiece == null &&
-                    !reservedCells.Contains(targetCell.mBoardPosition))
-                {
-                    // Резервируем клетку
-                    reservedCells.Add(targetCell.mBoardPosition);
-                    unit.MoveToCell(targetCell);
-                }
-            }
-
-            yield return new WaitForSeconds(0.3f);
-
-            // === ФАЗА 3: АТАКА (с одновременным уроном) ===
-            // Сначала собираем весь урон, потом применяем (чтобы атаки были истинно одновременными)
-            Dictionary<BasePiece, int> damageToApply = new Dictionary<BasePiece, int>();
+            yield return new WaitForSeconds(0.2f);
 
             foreach (var kvp in attacks)
-            {
-                BasePiece attacker = kvp.Key;
-                BasePiece defender = kvp.Value;
-
-                // Проверяем живучесть и дальность
-                if (attacker != null && attacker.gameObject.activeSelf &&
-                    defender != null && defender.gameObject.activeSelf &&
-                    attacker.CanAttackTarget(defender))
-                {
-                    if (!damageToApply.ContainsKey(defender))
-                        damageToApply[defender] = 0;
-
-                    damageToApply[defender] += attacker.damage;
-                    Debug.Log($"{attacker.name} (ID:{attacker.unitID}) атакует {defender.name} (ID:{defender.unitID}) на {attacker.damage} урона");
-                }
-            }
-
-            // Применяем урон одновременно
-            foreach (var kvp in damageToApply)
-            {
-                BasePiece defender = kvp.Key;
-                int totalDamage = kvp.Value;
-
-                if (defender != null && defender.gameObject.activeSelf)
-                {
-                    defender.TakeDamage(totalDamage);
-                }
-            }
+                if (kvp.Key != null && kvp.Key.gameObject.activeSelf && kvp.Value != null && kvp.Value.gameObject.activeSelf && kvp.Key.CanAttackTarget(kvp.Value))
+                    kvp.Key.AttackTarget(kvp.Value);
 
             yield return new WaitForSeconds(turnDelay);
         }
 
-        // Объявляем победителя
-        if (mMyMinis.Count > 0)
-            Debug.Log("=== ПОБЕДА ИГРОКА! ===");
-        else if (mEnemyMinis.Count > 0)
-            Debug.Log("=== ПОБЕДА ВРАГА! ===");
-        else
-            Debug.Log("=== НИЧЬЯ! ===");
+        // РћРїСЂРµРґРµР»СЏРµРј РїРѕР±РµРґРёС‚РµР»СЏ СЂР°СѓРЅРґР°
+        if (mMyMinis.Count > 0 && mEnemyMinis.Count == 0)
+            playerWins++;
+        else if (mEnemyMinis.Count > 0 && mMyMinis.Count == 0)
+            enemyWins++;
 
+        Debug.Log($"Р Р°СѓРЅРґ Р·Р°РІРµСЂС€С‘РЅ! РРіСЂРѕРє {playerWins} - {enemyWins} Р’СЂР°Рі");
+        UpdateScoreUI();
         mBattleInProgress = false;
+        IsBattleActive = false;
+
+        // РџР РћР’Р•Р РљРђ РќРђ РљРћРќР•Р¦ РЎР•Р РР
+        if (playerWins >= winsToWin || enemyWins >= winsToWin)
+        {
+            Debug.Log($"РЎР•Р РРЇ Р—РђР’Р•Р РЁР•РќРђ! РРіСЂРѕРє {playerWins} - {enemyWins} Р’СЂР°Рі");
+            EndSeries();
+            yield break; // Р’Р«РҐРћР”РРњ РёР· РєРѕСЂСѓС‚РёРЅС‹ РїРѕР»РЅРѕСЃС‚СЊСЋ
+        }
+
+        // РРЅР°С‡Рµ РіРѕС‚РѕРІРёРј СЃР»РµРґСѓСЋС‰РёР№ СЂР°СѓРЅРґ
+        currentRound++;
+        yield return new WaitForSeconds(2f);
+        UpdateScoreUI();
+        SetupNextRound();
+    }
+
+    private void EndSeries()
+    {
+        Debug.Log($"EndSeries РІС‹Р·РІР°РЅ! playerWins={playerWins}, enemyWins={enemyWins}");
+
+        if (playerWins >= winsToWin)
+        {
+            Debug.Log("РџРћР‘Р•Р”Рђ РР“Р РћРљРђ!");
+            if (victoryPanel != null) victoryPanel.SetActive(true);
+            if (finalScoreText != null) finalScoreText.text = $"{playerWins} - {enemyWins}";
+        }
+        else
+        {
+            Debug.Log("РџРћР РђР–Р•РќРР•!");
+            if (defeatPanel != null) defeatPanel.SetActive(true);
+            if (finalScoreText != null) finalScoreText.text = $"{playerWins} - {enemyWins}";
+        }
+
+        // Р‘Р»РѕРєРёСЂСѓРµРј РєРЅРѕРїРєСѓ "Р’ Р±РѕР№"
+        IsBattleActive = true;
+        BasePiece.sBattleStarted = true;
+    }
+
+    public void RestartSeries()
+    {
+        playerWins = 0;
+        enemyWins = 0;
+        currentRound = 1;
+        UpdateScoreUI();
+        if (victoryPanel != null) victoryPanel.SetActive(false);
+        if (defeatPanel != null) defeatPanel.SetActive(false);
+        SetupFirstRound();
+    }
+
+    public void SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
+    {
+        GameObject newPieceObject = Instantiate(mPiecePrefab);
+        newPieceObject.transform.SetParent(transform, false);
+        newPieceObject.transform.localScale = Vector3.one;
+
+        CanvasRenderer cr = newPieceObject.GetComponent<CanvasRenderer>();
+        if (cr != null) cr.cullTransparentMesh = false;
+
+        BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
+        newPiece.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
+        newPiece.Setup(teamColor, spriteColor, this);
+        newPiece.Place(mBoard.mAllCells[pos.x, pos.y]);
+
+        if (isPlayer) mMyMinis.Add(newPiece);
+        else mEnemyMinis.Add(newPiece);
+    }
+
+    private void CleanDeadUnits()
+    {
+        mMyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
+        mEnemyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
     }
 
     private List<BasePiece> GetAliveUnits()
     {
-        List<BasePiece> allUnits = new List<BasePiece>();
-        allUnits.AddRange(mMyMinis);
-        allUnits.AddRange(mEnemyMinis);
-        return allUnits;
-    }
-
-    public void SwitchSides(Color color)
-    {
-        Debug.Log("Action by: " + color);
-    }
-
-    public List<BasePiece> GetActiveUnits()
-    {
-        return GetAliveUnits();
+        List<BasePiece> all = new List<BasePiece>();
+        all.AddRange(mMyMinis.Where(u => u != null && u.gameObject.activeSelf));
+        all.AddRange(mEnemyMinis.Where(u => u != null && u.gameObject.activeSelf));
+        return all;
     }
 
     public void ClearBoard() {
