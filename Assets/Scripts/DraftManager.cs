@@ -17,23 +17,26 @@ public class DraftManager : MonoBehaviour
 
     public DraftSlot[] slots = new DraftSlot[3];
     public PieceManager pieceManager;
-    public GameObject dragPrefab; // Префаб для перетаскивания (простой Image)
+    public GameObject dragPrefab;
 
     private System.Type[] unitTypes = { typeof(Knight), typeof(Archer), typeof(Mage) };
     private GameObject mDraggedUnit;
     private System.Type mDraggedType;
 
-    void Start()
+    void Awake()
     {
-        gameObject.SetActive(false);
+        // СРАЗУ показываем и заполняем панель
+        gameObject.SetActive(true);
+        RefreshDraft();
 
-        // Добавляем Drag-обработчики на каждый слот
+        // Добавляем Drag-обработчики
         for (int i = 0; i < slots.Length; i++)
         {
             int index = i;
 
-            // Добавляем EventTrigger для драга
-            EventTrigger trigger = slots[i].button.gameObject.AddComponent<EventTrigger>();
+            EventTrigger trigger = slots[i].button.gameObject.GetComponent<EventTrigger>();
+            if (trigger == null) trigger = slots[i].button.gameObject.AddComponent<EventTrigger>();
+            trigger.triggers.Clear();
 
             EventTrigger.Entry beginDrag = new EventTrigger.Entry();
             beginDrag.eventID = EventTriggerType.BeginDrag;
@@ -49,6 +52,11 @@ public class DraftManager : MonoBehaviour
             endDrag.eventID = EventTriggerType.EndDrag;
             endDrag.callback.AddListener((data) => OnEndDragSlot((PointerEventData)data));
             trigger.triggers.Add(endDrag);
+
+            // КЛИК — быстрый спавн
+            slots[i].button.onClick.RemoveAllListeners();
+            int idx = i;
+            slots[i].button.onClick.AddListener(() => OnSlotClicked(idx));
         }
     }
 
@@ -66,14 +74,21 @@ public class DraftManager : MonoBehaviour
             if (slots[i].icon != null)
                 slots[i].icon.color = GetColorForType(type);
             if (slots[i].nameText != null)
-                slots[i].nameText.text = type.Name;
+                slots[i].nameText.text = TranslateType(type);
             if (slots[i].costText != null)
-                slots[i].costText.text = $"💰{cost}";
+                slots[i].costText.text = $"${cost}";
         }
     }
 
-    // КЛИК — быстрый спавн
-    public void OnSlotClicked(int index)
+    private string TranslateType(System.Type type)
+    {
+        if (type == typeof(Knight)) return "Рыцарь";
+        if (type == typeof(Archer)) return "Лучник";
+        if (type == typeof(Mage)) return "Маг";
+        return type.Name;
+    }
+
+    private void OnSlotClicked(int index)
     {
         if (BasePiece.sBattleStarted) return;
         System.Type type = slots[index].unitType;
@@ -81,14 +96,12 @@ public class DraftManager : MonoBehaviour
         RefreshDraft();
     }
 
-    // DRAG — начало перетаскивания
     private void OnBeginDragSlot(int index)
     {
         if (BasePiece.sBattleStarted) return;
 
         mDraggedType = slots[index].unitType;
 
-        // Создаём визуал для перетаскивания
         mDraggedUnit = Instantiate(dragPrefab, transform.parent);
         mDraggedUnit.transform.position = Input.mousePosition;
 
@@ -105,29 +118,24 @@ public class DraftManager : MonoBehaviour
         cg.blocksRaycasts = false;
     }
 
-    // DRAG — движение
     private void OnDragSlot(PointerEventData eventData)
     {
         if (mDraggedUnit != null)
             mDraggedUnit.transform.position = eventData.position;
     }
 
-    // DRAG — отпускание
     private void OnEndDragSlot(PointerEventData eventData)
     {
         if (mDraggedUnit != null)
         {
             Destroy(mDraggedUnit);
 
-            // Ищем клетку под мышью
             Cell targetCell = FindCellUnderMouse();
 
             if (targetCell != null && targetCell.mCurrentPiece == null)
             {
-                // Проверяем, что это половина игрока
                 if (targetCell.mBoardPosition.y < 5)
                 {
-                    // Покупаем и ставим на эту клетку
                     pieceManager.PurchaseUnitAtCell(mDraggedType, targetCell);
                     RefreshDraft();
                 }
@@ -159,7 +167,7 @@ public class DraftManager : MonoBehaviour
         if (pieceManager.SpendElixir(1))
             RefreshDraft();
         else
-            Debug.Log("Недостаточно эликсира для пропуска!");
+            Debug.Log("Недостаточно эликсира!");
     }
 
     private Color GetColorForType(System.Type type)
@@ -170,5 +178,9 @@ public class DraftManager : MonoBehaviour
     }
 
     public void Hide() => gameObject.SetActive(false);
-    public void Show() => gameObject.SetActive(true);
+    public void Show()
+    {
+        gameObject.SetActive(true);
+        RefreshDraft();
+    }
 }
