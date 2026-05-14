@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class Mage : BasePiece
 {
-    // Добавляем bool isPlayer в аргументы метода
     public override void Setup(bool isPlayer, Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
         unitID = 3;
@@ -13,10 +12,8 @@ public class Mage : BasePiece
         movementSpeed = 1.0f;
         cost = 4;
 
-        // Передаем isPlayer первым аргументом в базовый метод
         base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
-        
-        // Важно: инициализируем текущее здоровье после вызова base.Setup
-        currentHP = maxHP;
+
+        ApplyLevelStats();
     }
 }

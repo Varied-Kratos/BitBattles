@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class HealthBar : MonoBehaviour
@@ -9,7 +10,7 @@ public class HealthBar : MonoBehaviour
     private RectTransform mGreenRect;
     private RectTransform mRedRect;
     private float mFullWidth;
-
+    private TextMeshProUGUI mStarsText;
     public void Setup(BasePiece owner)
     {
         mOwner = owner;
@@ -43,6 +44,27 @@ public class HealthBar : MonoBehaviour
         myRect.anchorMin = myRect.anchorMax = new Vector2(0.5f, 0.5f);
         myRect.pivot = new Vector2(0.5f, 0.5f);
         myRect.anchoredPosition = new Vector2(0, 35);
+
+        // Звёзды — КРУПНЫЕ и ЗАМЕТНЫЕ
+        GameObject starsObj = new GameObject("Stars");
+        starsObj.transform.SetParent(transform, false);
+        mStarsText = starsObj.AddComponent<TextMeshProUGUI>();
+        mStarsText.fontSize = 18;          // БЫЛО 12, СТАЛО 18
+        mStarsText.fontStyle = FontStyles.Bold; // ЖИРНЫЕ
+        mStarsText.alignment = TMPro.TextAlignmentOptions.Center;
+        mStarsText.color = Color.yellow;
+
+        // Добавляем обводку для контраста
+        mStarsText.outlineWidth = 0.3f;
+        mStarsText.outlineColor = Color.black;
+
+        RectTransform starsRect = starsObj.GetComponent<RectTransform>();
+        starsRect.sizeDelta = new Vector2(mFullWidth, 22); // БЫЛО 14, СТАЛО 22
+        starsRect.anchorMin = starsRect.anchorMax = new Vector2(0.5f, 0.5f);
+        starsRect.pivot = new Vector2(0.5f, 0.5f);
+        starsRect.anchoredPosition = new Vector2(0, 18); // ВЫШЕ над HealthBar
+
+        UpdateStars();
     }
 
     void Update()
@@ -73,5 +95,34 @@ public class HealthBar : MonoBehaviour
             mGreenImage.color = Color.yellow;
         else
             mGreenImage.color = Color.red;
+        UpdateStars();
+    }
+    private void UpdateStars()
+    {
+        if (mStarsText != null && mOwner != null)
+        {
+            string stars = "";
+            for (int i = 0; i < mOwner.level; i++)
+                stars += "★";  // Крупная звезда вместо *
+
+            mStarsText.text = stars;
+
+            // Цвет по уровню
+            if (mOwner.level == 1)
+            {
+                mStarsText.color = Color.white;
+                mStarsText.fontSize = 18;
+            }
+            else if (mOwner.level == 2)
+            {
+                mStarsText.color = Color.yellow;
+                mStarsText.fontSize = 20; // Крупнее
+            }
+            else
+            {
+                mStarsText.color = new Color(1f, 0.6f, 0f); // Оранжевый
+                mStarsText.fontSize = 22; // Ещё крупнее
+            }
+        }
     }
 }

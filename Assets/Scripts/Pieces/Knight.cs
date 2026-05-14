@@ -12,10 +12,8 @@ public class Knight : BasePiece
         movementSpeed = 1.0f;
         cost = 3;
 
-        // Передаем все 4 аргумента в базовый класс
         base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
-        
-        // Инициализируем текущее здоровье после установки maxHP
-        currentHP = maxHP; 
+
+        ApplyLevelStats();
     }
 }

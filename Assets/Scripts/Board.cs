@@ -81,15 +81,19 @@ public class Board : MonoBehaviour
 
     public CellState ValidateCell(int targetX, int targetY, BasePiece checkingPiece)
     {
-        // Границы поля
+        // Проверка границ
         if (targetX < 0 || targetX >= 5 || targetY < 0 || targetY >= 10)
             return CellState.OutOfBounds;
 
-        // Проверка стороны: белые только в нижней половине (y < 5), чёрные в верхней (y >= 5)
-        if (checkingPiece.mColor == Color.white && targetY >= 5)
-            return CellState.InvalidTeamSide;
-        if (checkingPiece.mColor == Color.black && targetY < 5)
-            return CellState.InvalidTeamSide;
+        // Защита от null
+        if (checkingPiece == null)
+            return CellState.Free;
+
+        // УДАЛИ ИЛИ ЗАКОММЕНТИРУЙ ЭТИ СТРОКИ:
+        // if (checkingPiece.mColor == Color.white && targetY >= 5)
+        //     return CellState.InvalidTeamSide;
+        // if (checkingPiece.mColor == Color.black && targetY < 5)
+        //     return CellState.InvalidTeamSide;
 
         Cell targetCell = mAllCells[targetX, targetY];
 

@@ -31,24 +31,20 @@ public class SellZone : MonoBehaviour, IDropHandler
 
     private void SellPiece(BasePiece piece)
     {
-        if (BasePiece.sBattleStarted) return;
+        int refund = piece.GetSellCost();
 
-        int refund = Mathf.Max(1, piece.cost - 1);
-        PieceManager pm = FindObjectOfType<PieceManager>();
+        PieceManager pm = FindFirstObjectByType<PieceManager>();
         if (pm != null)
         {
             pm.RefundElixir(refund);
+            Debug.Log($"{piece.name} продан! +{refund} эликсира (уровень {piece.level})");
         }
 
-        Debug.Log($"{piece.name} продан! +{refund} эликсира");
-
-        // Убираем юнита
         if (piece.mCurrentCell != null)
             piece.mCurrentCell.mCurrentPiece = null;
 
-        PieceManager pmRef = FindObjectOfType<PieceManager>();
-        if (pmRef != null)
-            pmRef.mMyMinis.Remove(piece);
+        if (pm != null)
+            pm.mMyMinis.Remove(piece);
 
         Destroy(piece.gameObject);
     }

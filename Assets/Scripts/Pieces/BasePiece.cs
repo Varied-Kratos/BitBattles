@@ -17,6 +17,11 @@ public abstract class BasePiece : EventTrigger
     protected PieceManager mPieceManager;
     protected Cell mTargetCell = null;
 
+    [Header("Level System")]
+    public int level = 1;
+    public int maxLevel = 3;
+    public Sprite[] levelSprites; // 3 спрайта для уровней (назначаются в инспекторе для каждого префаба)
+
     // Статы
     [Header("Combat Stats")]
     public int maxHP = 10;
@@ -38,23 +43,44 @@ public abstract class BasePiece : EventTrigger
         mMainImage = GetComponent<Image>();
         mRectTransform = GetComponent<RectTransform>();
     }
-    public virtual void Setup(bool isPlayer, Color teamColor, Color32 spriteColor, PieceManager manager)
+    public virtual void Setup(bool isPlayer, Color newTeamColor, Color32 newSpriteColor, PieceManager newPieceManager)
     {
-        mIsPlayer = isPlayer; // Убедись, что эта переменная объявлена в классе
-        mPieceManager = manager;
-        
-        // Настройка визуала
-        if (mMainImage != null) // Или GetComponent<Image>()
-        {
-            mMainImage.color = spriteColor;
-        }
-        
-        // Если у тебя есть логика поворота спрайта для врага:
-        if (!mIsPlayer)
-        {
-            transform.localRotation = Quaternion.Euler(0, 0, 180); // Разворачиваем врага к игроку
-        }
+        mPieceManager = newPieceManager;
+        mColor = newTeamColor;
+        GetComponent<Image>().color = newSpriteColor;
+        mRectTransform = GetComponent<RectTransform>();
+        currentHP = maxHP;
+
+        level = 1; // сбрасываем уровень при создании
+        UpdateLevelAppearance();
+
         CreateHealthBar();
+    }
+
+    public void UpdateLevelAppearance()
+    {
+        RectTransform rt = GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            float scale = 1f + (level - 1) * 0.2f; // больше разница
+            rt.sizeDelta = new Vector2(70 * scale, 70 * scale);
+        }
+    }
+
+    public int GetSellCost()
+    {
+        int baseCost = cost;
+
+        // Считаем, сколько всего вложено
+        int totalInvested = baseCost;
+        for (int i = 2; i <= level; i++)
+            totalInvested *= 2;
+
+        // Возвращаем на 1 меньше (минимум 1)
+        int refund = totalInvested - 1;
+        if (refund < 1) refund = 1;
+
+        return refund;
     }
 
     // Привязка к клетке (при расстановке или перемещении)
@@ -108,16 +134,34 @@ public abstract class BasePiece : EventTrigger
         {
             if (RectTransformUtility.RectangleContainsScreenPoint(cell.mRectTransform, Input.mousePosition))
             {
-                // БЛОКИРУЕМ вражескую половину по имени
-                bool isPlayer = name.Contains("Player");
-                if (isPlayer && cell.mBoardPosition.y >= 5) continue;   // Игроки только внизу
-                if (!isPlayer && cell.mBoardPosition.y < 5) continue;   // Враги только вверху
+                // Проверка стороны ТОЛЬКО для расстановки (до боя)
+                if (!sBattleStarted)
+                {
+                    bool isPlayer = name.Contains("Player");
+                    if (isPlayer && cell.mBoardPosition.y >= 5) continue;
+                    if (!isPlayer && cell.mBoardPosition.y < 5) continue;
+                }
 
                 CellState state = mPieceManager.mBoard.ValidateCell(cell.mBoardPosition.x, cell.mBoardPosition.y, this);
+
                 if (state == CellState.Free)
                 {
                     mTargetCell = cell;
                     break;
+                }
+
+                // Слияние
+                if (state == CellState.Friendly && cell.mCurrentPiece != null && cell.mCurrentPiece != this)
+                {
+                    BasePiece other = cell.mCurrentPiece;
+                    if (other.name.Contains("Player") &&
+                        other.GetType() == GetType() &&
+                        other.level == level &&
+                        other.level < other.maxLevel)
+                    {
+                        mTargetCell = cell;
+                        break;
+                    }
                 }
             }
         }
@@ -137,33 +181,31 @@ public abstract class BasePiece : EventTrigger
 
         ClearHighlights();
 
-        // Проверяем, попал ли юнит в зону продажи
-        if (eventData.pointerEnter != null)
-        {
-            SellZone sellZone = eventData.pointerEnter.GetComponent<SellZone>();
-            if (sellZone != null)
-            {
-                // Продажа обрабатывается в SellZone.OnDrop
-                return;
-            }
-        }
-
         if (mTargetCell != null)
         {
-            bool isPlayer = name.Contains("Player");
-            if (isPlayer && mTargetCell.mBoardPosition.y >= 5)
+            // СЛИЯНИЕ
+            if (mTargetCell.mCurrentPiece != null && mTargetCell.mCurrentPiece != this)
             {
-                if (mCurrentCell != null)
-                    transform.position = mCurrentCell.transform.position;
-                return;
-            }
-            if (!isPlayer && mTargetCell.mBoardPosition.y < 5)
-            {
+                BasePiece other = mTargetCell.mCurrentPiece;
+                if (other.name.Contains("Player") &&
+                    other.GetType() == GetType() &&
+                    other.level == level &&
+                    other.level < other.maxLevel)
+                {
+                    Debug.Log($"СЛИЯНИЕ: {name} → {other.name}");
+                    if (mCurrentCell != null)
+                        mCurrentCell.mCurrentPiece = null;
+                    mPieceManager.FuseUnits(other, this);
+                    return;
+                }
+
+                // Клетка занята, но не для слияния — возврат
                 if (mCurrentCell != null)
                     transform.position = mCurrentCell.transform.position;
                 return;
             }
 
+            // Обычная установка
             Place(mTargetCell);
         }
         else
@@ -188,8 +230,8 @@ public abstract class BasePiece : EventTrigger
     {
         List<BasePiece> enemies;
 
-        // Определяем врагов по имени
-        if (mIsPlayer)
+        // Ищем врагов по ИМЕНИ, а не по цвету
+        if (name.Contains("Player"))
             enemies = mPieceManager.mEnemyMinis;
         else
             enemies = mPieceManager.mMyMinis;
@@ -202,6 +244,10 @@ public abstract class BasePiece : EventTrigger
             if (enemy == null || !enemy.gameObject.activeSelf) continue;
             if (enemy == this) continue;
             if (enemy.mCurrentCell == null) continue;
+
+            // Дополнительная проверка: враг должен быть в противоположной команде
+            if (name.Contains("Player") && enemy.name.Contains("Player")) continue;
+            if (!name.Contains("Player") && !enemy.name.Contains("Player")) continue;
 
             float dist = Vector2Int.Distance(
                 mCurrentCell.mBoardPosition,
@@ -265,6 +311,7 @@ public abstract class BasePiece : EventTrigger
         {
             Vector2Int newPos = myPos + d;
 
+            // БЕЗ проверки стороны — юниты могут ходить везде во время боя
             CellState state = mPieceManager.mBoard.ValidateCell(newPos.x, newPos.y, this);
             if (state != CellState.Free) continue;
 
@@ -278,7 +325,6 @@ public abstract class BasePiece : EventTrigger
 
         return best;
     }
-
     public virtual void MoveToCell(Cell targetCell)
     {
         if (targetCell == null) return;
@@ -302,6 +348,27 @@ public abstract class BasePiece : EventTrigger
         sBattleStarted = true;
     }
 
+    public void ApplyLevelStats()
+    {
+        float multiplier = 1f;
+
+        switch (level)
+        {
+            case 1:
+                multiplier = 1f;
+                break;
+            case 2:
+                multiplier = 2f;      // ×2 (было ×1.5)
+                break;
+            case 3:
+                multiplier = 4.5f;    // ×3.5 (было ×2.25)
+                break;
+        }
+
+        maxHP = Mathf.RoundToInt(maxHP * multiplier);
+        damage = Mathf.RoundToInt(damage * multiplier);
+        currentHP = maxHP;
+    }
     private void CreateHealthBar()
     {
         GameObject healthBarObj = new GameObject("HealthBar");

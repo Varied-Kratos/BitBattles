@@ -31,7 +31,7 @@ public class PieceManager : MonoBehaviour
     private bool mBattleInProgress = false;
 
     [Header("Elixir System")]
-    public int maxElixir = 10;
+    public int maxElixir = 999;
     public int currentElixir;
     public TextMeshProUGUI elixirText;
 
@@ -60,6 +60,7 @@ public class PieceManager : MonoBehaviour
         public Vector2Int position;
         public int currentHP;
         public int maxHP;
+        public int level; // ← ДОБАВИТЬ УРОВЕНЬ
     }
 
     // Стоимость юнитов
@@ -111,7 +112,6 @@ public class PieceManager : MonoBehaviour
 
         int elixirBonus = 4;
         currentElixir += elixirBonus;
-        if (currentElixir > maxElixir) currentElixir = maxElixir;
         UpdateElixirUI();
 
         BasePiece.sBattleStarted = false;
@@ -133,10 +133,12 @@ public class PieceManager : MonoBehaviour
                     unitType = unit.GetType().Name,
                     position = unit.mCurrentCell.mBoardPosition,
                     currentHP = unit.currentHP,
-                    maxHP = unit.maxHP
+                    maxHP = unit.maxHP,
+                    level = unit.level // ← СОХРАНЯЕМ УРОВЕНЬ
                 });
             }
         }
+        Debug.Log($"Сохранено перед боем: {savedPlayerUnits.Count} юнитов");
     }
 
     private void RestorePlayerUnits()
@@ -147,9 +149,17 @@ public class PieceManager : MonoBehaviour
             if (type != null && mBoard.mAllCells[data.position.x, data.position.y].mCurrentPiece == null)
             {
                 BasePiece piece = SpawnUnit(type, Color.white, GetColorForType(data.unitType), data.position, true);
-                if (piece != null) piece.currentHP = data.currentHP;
+                if (piece != null)
+                {
+                    piece.currentHP = data.currentHP;
+                    piece.maxHP = data.maxHP;
+                    piece.level = data.level; // ← ВОССТАНАВЛИВАЕМ УРОВЕНЬ
+                    piece.ApplyLevelStats();   // ← ПЕРЕСЧИТЫВАЕМ СТАТЫ
+                    piece.UpdateLevelAppearance(); // ← ОБНОВЛЯЕМ ВИЗУАЛ
+                }
             }
         }
+        Debug.Log($"Восстановлено юнитов: {mMyMinis.Count}");
     }
 
     private Type GetTypeByName(string name)
@@ -239,14 +249,13 @@ public class PieceManager : MonoBehaviour
     public void RefundElixir(int cost)
     {
         currentElixir += cost;
-        if (currentElixir > maxElixir) currentElixir = maxElixir;
         UpdateElixirUI();
     }
 
     private void UpdateElixirUI()
     {
         if (elixirText != null)
-            elixirText.text = $"Эликсир: {currentElixir}/{maxElixir}";
+            elixirText.text = $"{currentElixir}";
     }
 
     private void UpdateScoreUI()
@@ -517,5 +526,90 @@ public class PieceManager : MonoBehaviour
         }
 
         SpawnUnit(unitType, Color.white, GetUnitColor(unitType), cell.mBoardPosition, true);
+    }
+
+    // Слияние двух одинаковых юнитов
+    public void FuseUnits(BasePiece target, BasePiece dragged)
+    {
+        if (target.GetType() != dragged.GetType()) return;
+        if (target.level != dragged.level) return;
+        if (target.level >= target.maxLevel) return;
+
+        Debug.Log($"⭐ СЛИЯНИЕ: {dragged.name} → {target.name} → уровень {target.level + 1}!");
+
+        // Эффект слияния
+        StartCoroutine(FusionEffect(target, dragged));
+    }
+
+    private IEnumerator FusionEffect(BasePiece target, BasePiece dragged)
+    {
+        Image targetImg = target.GetComponent<Image>();
+        Image draggedImg = dragged.GetComponent<Image>();
+
+        // Мигание 3 раза
+        for (int i = 0; i < 3; i++)
+        {
+            if (targetImg != null) targetImg.color = Color.yellow;
+            if (draggedImg != null) draggedImg.color = Color.yellow;
+            yield return new WaitForSeconds(0.1f);
+
+            if (targetImg != null) targetImg.color = Color.white;
+            if (draggedImg != null) draggedImg.color = Color.white;
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // Улучшаем цель
+        target.level++;
+        target.ApplyLevelStats();
+        target.UpdateLevelAppearance();
+
+        // Удаляем перетащенного
+        if (dragged.mCurrentCell != null)
+            dragged.mCurrentCell.mCurrentPiece = null;
+        mMyMinis.Remove(dragged);
+        Destroy(dragged.gameObject);
+
+        // Финальная вспышка
+        if (targetImg != null)
+        {
+            targetImg.color = new Color(1f, 0.8f, 0f); // золотой
+            yield return new WaitForSeconds(0.2f);
+        }
+        // Вместо белого — возвращаем цвет по типу юнита
+        Color baseColor = Color.white;
+        if (target is Knight) baseColor = new Color(0.31f, 0.49f, 0.62f); // синий
+        else if (target is Archer) baseColor = new Color(0.31f, 0.78f, 0.39f); // зелёный
+        else if (target is Mage) baseColor = new Color(0.78f, 0.31f, 0.78f); // фиолетовый
+
+        targetImg.color = baseColor;
+        yield return new WaitForSeconds(0.1f);
+        Debug.Log($"Слияние завершено! {target.name}: HP={target.maxHP}, Урон={target.damage}, Уровень={target.level}");
+    }
+
+    // Авто-слияние после покупки
+    public void CheckFusion()
+    {
+        var groups = new Dictionary<string, List<BasePiece>>();
+
+        foreach (var unit in mMyMinis)
+        {
+            if (unit == null || !unit.gameObject.activeSelf) continue;
+            if (unit.level >= unit.maxLevel) continue;
+
+            string key = $"{unit.GetType().Name}_{unit.level}";
+            if (!groups.ContainsKey(key))
+                groups[key] = new List<BasePiece>();
+            groups[key].Add(unit);
+        }
+
+        foreach (var kvp in groups)
+        {
+            if (kvp.Value.Count >= 2)
+            {
+                FuseUnits(kvp.Value[0], kvp.Value[1]);
+                CheckFusion(); // рекурсивно проверяем снова
+                break;
+            }
+        }
     }
 }
