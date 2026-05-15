@@ -1,7 +1,8 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public abstract class BasePiece : EventTrigger
 {
@@ -51,19 +52,21 @@ public abstract class BasePiece : EventTrigger
         mRectTransform = GetComponent<RectTransform>();
         currentHP = maxHP;
 
+        Image img = GetComponent<Image>();
+        if (img != null)
+            img.color = Color.white;
+
         level = 1; // сбрасываем уровень при создании
         UpdateLevelAppearance();
-
         CreateHealthBar();
     }
 
     public void UpdateLevelAppearance()
     {
-        RectTransform rt = GetComponent<RectTransform>();
-        if (rt != null)
+        if (levelSprites != null && levelSprites.Length >= level && levelSprites[level - 1] != null)
         {
-            float scale = 1f + (level - 1) * 0.2f; // больше разница
-            rt.sizeDelta = new Vector2(70 * scale, 70 * scale);
+            Image img = GetComponent<Image>();
+            if (img != null) img.sprite = levelSprites[level - 1];
         }
     }
 

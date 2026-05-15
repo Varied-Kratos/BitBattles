@@ -53,6 +53,11 @@ public class PieceManager : MonoBehaviour
 
     private List<SavedUnitData> savedPlayerUnits = new List<SavedUnitData>();
 
+    [Header("Level Sprites")]
+    public Sprite[] knightSprites; // 3 спрайта: Knight1, Knight2, Knight3
+    public Sprite[] archerSprites; // 3 спрайта: Archer1, Archer2, Archer3
+    public Sprite[] mageSprites;   // 3 спрайта: Mage1, Mage2, Mage3
+
     [System.Serializable]
     private class SavedUnitData
     {
@@ -426,12 +431,13 @@ public class PieceManager : MonoBehaviour
         newPieceObject.transform.localScale = Vector3.one;
         newPieceObject.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
 
-        Image targetImage = newPieceObject.GetComponent<Image>();
-        Image templateImage = template.GetComponent<Image>();
-        if (targetImage != null && templateImage != null)
-            targetImage.sprite = templateImage.sprite;
-
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
+        if (unitType == typeof(Knight))
+            newPiece.levelSprites = knightSprites;
+        else if (unitType == typeof(Archer))
+            newPiece.levelSprites = archerSprites;
+        else if (unitType == typeof(Mage))
+            newPiece.levelSprites = mageSprites;
         newPiece.maxHP = template.maxHP;
         newPiece.currentHP = template.maxHP;
         newPiece.damage = template.damage;
@@ -441,6 +447,11 @@ public class PieceManager : MonoBehaviour
         newPiece.cost = GetUnitCost(unitType);
 
         newPiece.Setup(isPlayer, teamColor, spriteColor, this);
+
+        // Убираем наложение цвета — спрайт уже цветной
+        Image img = newPiece.GetComponent<Image>();
+        if (img != null)
+            img.color = Color.white; // Белый = без перекрашивания
 
         // ВАЖНО: привязываем к клетке
         newPiece.Place(targetCell);
@@ -561,7 +572,7 @@ public class PieceManager : MonoBehaviour
         // Улучшаем цель
         target.level++;
         target.ApplyLevelStats();
-        target.UpdateLevelAppearance();
+        target.UpdateLevelAppearance(); // ← тут меняется спрайт
 
         // Удаляем перетащенного
         if (dragged.mCurrentCell != null)
@@ -574,15 +585,9 @@ public class PieceManager : MonoBehaviour
         {
             targetImg.color = new Color(1f, 0.8f, 0f); // золотой
             yield return new WaitForSeconds(0.2f);
+            targetImg.color = Color.white; // ВОЗВРАЩАЕМ БЕЛЫЙ
         }
-        // Вместо белого — возвращаем цвет по типу юнита
-        Color baseColor = Color.white;
-        if (target is Knight) baseColor = new Color(0.31f, 0.49f, 0.62f); // синий
-        else if (target is Archer) baseColor = new Color(0.31f, 0.78f, 0.39f); // зелёный
-        else if (target is Mage) baseColor = new Color(0.78f, 0.31f, 0.78f); // фиолетовый
 
-        targetImg.color = baseColor;
-        yield return new WaitForSeconds(0.1f);
         Debug.Log($"Слияние завершено! {target.name}: HP={target.maxHP}, Урон={target.damage}, Уровень={target.level}");
     }
 

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a3feb4a832e80a040bfbf3a836db214d
+guid: 278e22521376b004b813f022a5453541
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -4306330383152560266
-    second: photo_2026-05-15_01-45-20_0
+      213: 3312514761468480124
+    second: knight3_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: photo_2026-05-15_01-45-20_0
+      name: knight3_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1024
-        height: 1024
+        x: 82
+        y: 37
+        width: 191
+        height: 194
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 67748ba1557dc34c0800000000000000
-      internalID: -4306330383152560266
+      spriteID: c7a019600aa68fd20800000000000000
+      internalID: 3312514761468480124
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      photo_2026-05-15_01-45-20_0: -4306330383152560266
+      knight3_0: 3312514761468480124
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

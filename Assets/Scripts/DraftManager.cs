@@ -71,13 +71,32 @@ public class DraftManager : MonoBehaviour
 
             int cost = pieceManager.GetUnitCost(type);
 
+            // Ставим спрайт 1 уровня вместо цвета
             if (slots[i].icon != null)
-                slots[i].icon.color = GetColorForType(type);
+            {
+                Sprite sprite = GetSpriteForType(type);
+                if (sprite != null)
+                    slots[i].icon.sprite = sprite;
+                slots[i].icon.color = Color.white; // не перекрашиваем
+            }
+
             if (slots[i].nameText != null)
                 slots[i].nameText.text = TranslateType(type);
             if (slots[i].costText != null)
-                slots[i].costText.text = $"${cost}";
+                slots[i].costText.text = $"{cost}";
         }
+    }
+
+    // Новый метод — получаем спрайт 1 уровня для типа
+    private Sprite GetSpriteForType(System.Type type)
+    {
+        if (type == typeof(Knight) && pieceManager.knightSprites.Length > 0)
+            return pieceManager.knightSprites[0];
+        if (type == typeof(Archer) && pieceManager.archerSprites.Length > 0)
+            return pieceManager.archerSprites[0];
+        if (type == typeof(Mage) && pieceManager.mageSprites.Length > 0)
+            return pieceManager.mageSprites[0];
+        return null;
     }
 
     private string TranslateType(System.Type type)
