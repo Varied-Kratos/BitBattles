@@ -90,14 +90,14 @@ public class DraftManager : MonoBehaviour
     // Новый метод — получаем спрайт 1 уровня для типа
     private Sprite GetSpriteForType(System.Type type)
     {
-        if (type == typeof(Knight) && pieceManager.knightSprites.Length > 0)
-            return pieceManager.knightSprites[0];
-        if (type == typeof(Archer) && pieceManager.archerSprites.Length > 0)
-            return pieceManager.archerSprites[0];
-        if (type == typeof(Mage) && pieceManager.mageSprites.Length > 0)
-            return pieceManager.mageSprites[0];
+        if (type == typeof(Knight))
+            return pieceManager.knightShopSprite;
+        if (type == typeof(Archer))
+            return pieceManager.archerShopSprite;
+        if (type == typeof(Mage))
+            return pieceManager.mageShopSprite;
         return null;
-    }
+    }   
 
     private string TranslateType(System.Type type)
     {

@@ -97,32 +97,24 @@ public class HealthBar : MonoBehaviour
             mGreenImage.color = Color.red;
         UpdateStars();
     }
+
     private void UpdateStars()
     {
         if (mStarsText != null && mOwner != null)
         {
             string stars = "";
             for (int i = 0; i < mOwner.level; i++)
-                stars += "★";  // Крупная звезда вместо *
+                stars += "S";  // ← МЕНЯЕМ ★ НА S
 
             mStarsText.text = stars;
+            mStarsText.fontSize = 22;
+            mStarsText.fontStyle = FontStyles.Bold;
+            mStarsText.outlineWidth = 0.4f;
+            mStarsText.outlineColor = Color.black;
 
-            // Цвет по уровню
-            if (mOwner.level == 1)
-            {
-                mStarsText.color = Color.white;
-                mStarsText.fontSize = 18;
-            }
-            else if (mOwner.level == 2)
-            {
-                mStarsText.color = Color.yellow;
-                mStarsText.fontSize = 20; // Крупнее
-            }
-            else
-            {
-                mStarsText.color = new Color(1f, 0.6f, 0f); // Оранжевый
-                mStarsText.fontSize = 22; // Ещё крупнее
-            }
+            if (mOwner.level == 1) mStarsText.color = Color.gray;
+            else if (mOwner.level == 2) mStarsText.color = Color.yellow;
+            else mStarsText.color = new Color(1f, 0.5f, 0f);
         }
     }
 }

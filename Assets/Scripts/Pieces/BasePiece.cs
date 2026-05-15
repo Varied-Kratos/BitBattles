@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using UnityEngine;
@@ -36,9 +37,14 @@ public abstract class BasePiece : EventTrigger
     public int cost = 1;
     public int unitID = 0;
 
+    
+
+    private Vector2Int mLastDirection = Vector2Int.zero;
     private HealthBar mHealthBar;
     private CanvasGroup mCanvasGroup;
     public static bool sBattleStarted = false;
+
+   
     protected virtual void Awake()
     {
         mMainImage = GetComponent<Image>();
@@ -275,17 +281,26 @@ public abstract class BasePiece : EventTrigger
         int dist = Mathf.Max(dx, dy);
         return dist <= attackRange;
     }
-
-    public virtual void AttackTarget(BasePiece target)
-    {
-        target.TakeDamage(damage);
-        Debug.Log($"{name} атакует {target.name} на {damage} урона");
-    }
+    [Header("Attack Sprites")]
+    public Sprite[] attackSprites; // 1 или 4 спрайта атаки (по направлениям)
+    private Sprite mOriginalSprite; // чтобы запомнить исходный спрайт
 
     public virtual void TakeDamage(int amount)
     {
         currentHP -= amount;
+        StartCoroutine(DamageFlash());
         if (currentHP <= 0) Die();
+    }
+
+    private IEnumerator DamageFlash()
+    {
+        Image img = GetComponent<Image>();
+        if (img == null) yield break;
+
+        Color original = img.color;
+        img.color = Color.red;
+        yield return new WaitForSeconds(0.1f);
+        img.color = original;
     }
 
     public virtual void Die()
@@ -341,10 +356,100 @@ public abstract class BasePiece : EventTrigger
     {
         BasePiece target = FindNearestEnemy();
         if (target == null) return;
-        if (CanAttackTarget(target)) AttackTarget(target);
-        else { Cell next = GetCellTowardsTarget(target); if (next != null) MoveToCell(next); }
+
+        if (CanAttackTarget(target))
+        {
+            AttackTarget(target);
+        }
+        else
+        {
+            Cell next = GetCellTowardsTarget(target);
+            if (next != null)
+            {
+                MoveToCell(next);
+            }
+            // Если не можем двигаться — просто пропускаем ход
+        }
     }
 
+    private Coroutine mAttackAnimation;
+
+    public virtual void AttackTarget(BasePiece target)
+    {
+        target.TakeDamage(damage);
+
+        // Меняем спрайт на атакующий
+        if (attackSprites != null && attackSprites.Length > 0 && attackSprites[0] != null)
+        {
+            Image img = GetComponent<Image>();
+            if (img != null)
+            {
+                mOriginalSprite = img.sprite; // запоминаем
+                img.sprite = attackSprites[0]; // ставим атакующий
+            }
+        }
+
+        // Запускаем возврат спрайта через время
+        StartCoroutine(ResetAttackSprite());
+
+        Debug.Log($"{name} атакует {target.name} на {damage} урона");
+    }
+
+    private IEnumerator ResetAttackSprite()
+    {
+        yield return new WaitForSeconds(0.3f); // длительность атакующего спрайта
+
+        Image img = GetComponent<Image>();
+        if (img != null && mOriginalSprite != null)
+        {
+            img.sprite = mOriginalSprite;
+        }
+    }
+
+    private IEnumerator MeleeStrike(BasePiece target)
+    {
+        Image targetImg = target?.GetComponent<Image>();
+        Vector3 originalPos = transform.position;
+        Vector3 targetPos = target.transform.position;
+        Vector3 dir = (targetPos - originalPos).normalized;
+
+        float t = 0;
+        while (t < 0.1f) { t += Time.deltaTime; transform.position = Vector3.Lerp(originalPos, originalPos + dir * 25f, t / 0.1f); yield return null; }
+
+        if (targetImg != null) { Color c = targetImg.color; targetImg.color = Color.red; yield return new WaitForSeconds(0.1f); targetImg.color = c; }
+
+        t = 0;
+        while (t < 0.1f) { t += Time.deltaTime; transform.position = Vector3.Lerp(originalPos + dir * 25f, originalPos, t / 0.1f); yield return null; }
+        transform.position = originalPos;
+    }
+
+    private IEnumerator ArrowShot(BasePiece target)
+    {
+        Image targetImg = target?.GetComponent<Image>();
+        Vector3 originalPos = transform.position;
+        Vector3 dir = (transform.position - target.transform.position).normalized;
+
+        float t = 0;
+        while (t < 0.1f) { t += Time.deltaTime; transform.position = Vector3.Lerp(originalPos, originalPos + dir * 15f, t / 0.1f); yield return null; }
+
+        if (targetImg != null) { Color c = targetImg.color; targetImg.color = Color.red; yield return new WaitForSeconds(0.1f); targetImg.color = c; }
+
+        t = 0;
+        while (t < 0.1f) { t += Time.deltaTime; transform.position = Vector3.Lerp(originalPos + dir * 15f, originalPos, t / 0.1f); yield return null; }
+        transform.position = originalPos;
+    }
+
+    private IEnumerator MagicBolt(BasePiece target)
+    {
+        Image targetImg = target?.GetComponent<Image>();
+        Vector3 originalPos = transform.position;
+
+        float t = 0;
+        while (t < 0.15f) { t += Time.deltaTime; float y = Mathf.Sin(t / 0.15f * Mathf.PI) * 15f; transform.position = originalPos + new Vector3(0, y, 0); yield return null; }
+        transform.position = originalPos;
+
+        if (targetImg != null) { Color c = targetImg.color; targetImg.color = Color.magenta; yield return new WaitForSeconds(0.15f); targetImg.color = c; }
+    }
     // Статический метод для отключения драга при старте боя
     public static void DisableAllDrag()
     {

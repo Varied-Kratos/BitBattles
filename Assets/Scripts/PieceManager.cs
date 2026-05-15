@@ -26,6 +26,11 @@ public class PieceManager : MonoBehaviour
     public List<BasePiece> mEnemyMinis = new List<BasePiece>();
     public Board mBoard;
 
+    [Header("Shop Sprites")]
+    public Sprite knightShopSprite;
+    public Sprite archerShopSprite;
+    public Sprite mageShopSprite;
+
     [Header("Battle Settings")]
     public float turnDelay = 1.0f;
     private bool mBattleInProgress = false;
@@ -57,6 +62,54 @@ public class PieceManager : MonoBehaviour
     public Sprite[] knightSprites; // 3 спрайта: Knight1, Knight2, Knight3
     public Sprite[] archerSprites; // 3 спрайта: Archer1, Archer2, Archer3
     public Sprite[] mageSprites;   // 3 спрайта: Mage1, Mage2, Mage3
+    [Header("Attack Effects")]
+    public GameObject arrowPrefab;
+    public GameObject slashPrefab;
+    public GameObject magicPrefab;
+    public float projectileSpeed = 5f;
+
+    public void PlayAttackEffect(BasePiece attacker, BasePiece defender)
+    {
+        GameObject effect = null;
+
+        if (attacker is Knight)
+            effect = Instantiate(slashPrefab, transform);
+        else if (attacker is Archer)
+            effect = Instantiate(arrowPrefab, transform);
+        else if (attacker is Mage)
+            effect = Instantiate(magicPrefab, transform);
+
+        if (effect != null)
+            StartCoroutine(FlyProjectile(effect, attacker.transform.position, defender.transform.position));
+    }
+
+    private IEnumerator FlyProjectile(GameObject projectile, Vector3 from, Vector3 to)
+    {
+        projectile.transform.position = from;
+        float duration = 0.3f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            projectile.transform.position = Vector3.Lerp(from, to, t);
+
+            // Поворачиваем снаряд в сторону цели
+            Vector3 dir = (to - from).normalized;
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            projectile.transform.rotation = Quaternion.Euler(0, 0, angle);
+
+            yield return null;
+        }
+
+        Destroy(projectile);
+    }
+
+    [Header("Enemy Level Sprites")]
+    public Sprite[] enemyKnightSprites;
+    public Sprite[] enemyArcherSprites;
+    public Sprite[] enemyMageSprites;
 
     [System.Serializable]
     private class SavedUnitData
@@ -265,7 +318,7 @@ public class PieceManager : MonoBehaviour
 
     private void UpdateScoreUI()
     {
-        if (scoreText != null) scoreText.text = $"Игрок {playerWins} - {enemyWins} Враг";
+        if (scoreText != null) scoreText.text = $"Вы {playerWins} - {enemyWins} Враг";
         if (roundText != null) roundText.text = $"Раунд {currentRound}/5";
     }
 
@@ -361,8 +414,17 @@ public class PieceManager : MonoBehaviour
             yield return new WaitForSeconds(0.2f);
 
             foreach (var kvp in attacks)
-                if (kvp.Key != null && kvp.Key.gameObject.activeSelf && kvp.Value != null && kvp.Value.gameObject.activeSelf && kvp.Key.CanAttackTarget(kvp.Value))
+            {
+                if (kvp.Key != null && kvp.Key.gameObject.activeSelf &&
+                    kvp.Value != null && kvp.Value.gameObject.activeSelf &&
+                    kvp.Key.CanAttackTarget(kvp.Value))
+                {
+                    // ЭФФЕКТ АТАКИ
+                    PlayAttackEffect(kvp.Key, kvp.Value);
+
                     kvp.Key.AttackTarget(kvp.Value);
+                }
+            }
 
             yield return new WaitForSeconds(turnDelay);
         }
@@ -412,6 +474,14 @@ public class PieceManager : MonoBehaviour
         SetupFirstRound();
     }
 
+    [Header("Attack Sprites")]
+    public Sprite[] knightAttackSprites;
+    public Sprite[] archerAttackSprites;
+    public Sprite[] mageAttackSprites;
+    public Sprite[] enemyKnightAttackSprites;
+    public Sprite[] enemyArcherAttackSprites;
+    public Sprite[] enemyMageAttackSprites;
+
     public BasePiece SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
     {
         Cell targetCell = mBoard.mAllCells[pos.x, pos.y];
@@ -446,6 +516,31 @@ public class PieceManager : MonoBehaviour
         newPiece.unitID = template.unitID;
         newPiece.cost = GetUnitCost(unitType);
 
+        if (isPlayer)
+        {
+            if (unitType == typeof(Knight)) newPiece.levelSprites = knightSprites;
+            else if (unitType == typeof(Archer)) newPiece.levelSprites = archerSprites;
+            else newPiece.levelSprites = mageSprites;
+        }
+        else
+        {
+            if (unitType == typeof(Knight)) newPiece.levelSprites = enemyKnightSprites;
+            else if (unitType == typeof(Archer)) newPiece.levelSprites = enemyArcherSprites;
+            else newPiece.levelSprites = enemyMageSprites;
+        }
+        if (isPlayer)
+        {
+            if (unitType == typeof(Knight)) newPiece.attackSprites = knightAttackSprites;
+            else if (unitType == typeof(Archer)) newPiece.attackSprites = archerAttackSprites;
+            else newPiece.attackSprites = mageAttackSprites;
+        }
+        else
+        {
+            if (unitType == typeof(Knight)) newPiece.attackSprites = enemyKnightAttackSprites;
+            else if (unitType == typeof(Archer)) newPiece.attackSprites = enemyArcherAttackSprites;
+            else newPiece.attackSprites = enemyMageAttackSprites;
+        }
+
         newPiece.Setup(isPlayer, teamColor, spriteColor, this);
 
         // Убираем наложение цвета — спрайт уже цветной
@@ -458,7 +553,6 @@ public class PieceManager : MonoBehaviour
 
         if (isPlayer) mMyMinis.Add(newPiece);
         else mEnemyMinis.Add(newPiece);
-
         return newPiece;
     }
 
