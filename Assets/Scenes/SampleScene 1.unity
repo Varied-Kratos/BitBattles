@@ -989,9 +989,9 @@ MonoBehaviour:
   finalScoreText: {fileID: 0}
   draftManager: {fileID: 279308933}
   knightSprites:
-  - {fileID: -5689366480183472201, guid: 6016e08f96af1a8459ef27a90016b82e, type: 3}
-  - {fileID: -3951517328453871476, guid: 1489c741041100a48a56a9f55ed1d843, type: 3}
-  - {fileID: 8982129810597719157, guid: 7bd1433c61d57db4ebae7136b80929b7, type: 3}
+  - {fileID: 5963204450062412982, guid: 5ebc7f8512b48f846a179c1b84713fbc, type: 3}
+  - {fileID: -7072792809494709325, guid: edd4b8e85533ca24db539dd706344be1, type: 3}
+  - {fileID: 3312514761468480124, guid: 278e22521376b004b813f022a5453541, type: 3}
   archerSprites:
   - {fileID: 1547295944305074330, guid: 69340ce1e2dbf5e4a99e3a3ee5979865, type: 3}
   - {fileID: 7980839109703495272, guid: b850e01ce4ae62645a9105cb8541fd73, type: 3}
