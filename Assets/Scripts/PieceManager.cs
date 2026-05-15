@@ -49,7 +49,8 @@ public class PieceManager : MonoBehaviour
     public TextMeshProUGUI scoreText;
     public GameObject victoryPanel;
     public GameObject defeatPanel;
-    public TextMeshProUGUI finalScoreText;
+    public TextMeshProUGUI finalScoreText1;
+    public TextMeshProUGUI finalScoreText2;
 
     [Header("Draft")]
     public DraftManager draftManager;
@@ -452,12 +453,22 @@ public class PieceManager : MonoBehaviour
         if (playerWins >= winsToWin)
         {
             if (victoryPanel != null) victoryPanel.SetActive(true);
-            if (finalScoreText != null) finalScoreText.text = $"{playerWins} - {enemyWins}";
+            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
         }
         else
         {
             if (defeatPanel != null) defeatPanel.SetActive(true);
-            if (finalScoreText != null) finalScoreText.text = $"{playerWins} - {enemyWins}";
+            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
+        }
+        if (playerWins >= winsToWin)
+        {
+            if (victoryPanel != null) victoryPanel.SetActive(true);
+            if (finalScoreText2 != null) finalScoreText2.text = $"{playerWins} - {enemyWins}";
+        }
+        else
+        {
+            if (defeatPanel != null) defeatPanel.SetActive(true);
+            if (finalScoreText2 != null) finalScoreText2.text = $"{playerWins} - {enemyWins}";
         }
         IsBattleActive = true;
         BasePiece.sBattleStarted = true;
