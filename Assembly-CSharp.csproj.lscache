@@ -64,6 +64,7 @@ Assets/Scripts/
   BasePiece.cs
   Knight.cs
   Wizard.cs
+ PlayerDataManager.cs
  PythonConnector.cs
  UnitSell.cs
  UnitSpawnPanel.cs

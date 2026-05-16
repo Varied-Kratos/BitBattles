@@ -228,7 +228,7 @@ public class PieceManager : MonoBehaviour
                 timerText.color = Color.white;
         }
 
-        if (mTimer <= 0f)
+        if (mTimer <= 0f && mTimerActive)
         {
             StopTimer();
             StartBattle();
