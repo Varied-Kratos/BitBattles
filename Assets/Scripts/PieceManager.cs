@@ -481,31 +481,37 @@ public class PieceManager : MonoBehaviour
 
     private void EndSeries()
     {
-        StopTimer(); // ← ОСТАНАВЛИВАЕМ ТАЙМЕР
-        if (playerWins >= winsToWin)
-        {
-            if (victoryPanel != null) victoryPanel.SetActive(true);
-            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
-        }
-        else
-        {
-            if (defeatPanel != null) defeatPanel.SetActive(true);
-            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
-        }
-        if (playerWins >= winsToWin)
-        {
-            if (victoryPanel != null) victoryPanel.SetActive(true);
-            if (finalScoreText2 != null) finalScoreText2.text = $"{playerWins} - {enemyWins}";
-        }
-        else
-        {
-            if (defeatPanel != null) defeatPanel.SetActive(true);
-            if (finalScoreText2 != null) finalScoreText2.text = $"{playerWins} - {enemyWins}";
-        }
-        IsBattleActive = true;
-        BasePiece.sBattleStarted = true;
-    }
+        StopTimer();
 
+        bool isVictory = playerWins >= winsToWin;
+
+        if (isVictory)
+        {
+            if (victoryPanel != null) victoryPanel.SetActive(true);
+            
+            if (PlayerDataManager.instance != null)
+            {
+                PlayerDataManager.instance.AddResult(true, 25);
+            }
+        }
+        else
+        {
+            if (defeatPanel != null) defeatPanel.SetActive(true);
+            
+            if (PlayerDataManager.instance != null)
+            {
+                PlayerDataManager.instance.AddResult(false, 15);
+            }
+        }
+
+        string finalScore = $"{playerWins} - {enemyWins}";
+        
+        if (finalScoreText1 != null) finalScoreText1.text = finalScore;
+        if (finalScoreText2 != null) finalScoreText2.text = finalScore;
+
+        IsBattleActive = false;
+        BasePiece.sBattleStarted = false;
+    }
     public void RestartSeries()
     {
         playerWins = 0;
@@ -757,5 +763,9 @@ public class PieceManager : MonoBehaviour
                 break;
             }
         }
+    }
+    public void ExitToMenu()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 }

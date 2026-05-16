@@ -57,4 +57,21 @@ public class PlayerDataManager : MonoBehaviour
         
         Debug.Log("Данные игрока полностью сброшены!");
     }
+
+    public void AddResult(bool isWin, int trophyAmount)
+    {
+        if (isWin)
+        {
+            wins++;
+            trophies += trophyAmount;
+        }
+        else
+        {
+            losses++;
+            trophies = Mathf.Max(0, trophies - trophyAmount);
+        }
+
+        SaveData();
+        Debug.Log($"Данные обновлены. Кубки: {trophies}, Победы: {wins}, Поражения: {losses}");
+    }
 }
