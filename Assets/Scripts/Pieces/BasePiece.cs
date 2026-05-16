@@ -66,7 +66,14 @@ public abstract class BasePiece : EventTrigger
         UpdateLevelAppearance();
         CreateHealthBar();
     }
-
+    public void RefreshHealthBar()
+    {
+        HealthBar hb = GetComponentInChildren<HealthBar>();
+        if (hb != null)
+        {
+            hb.RefreshStars();
+        }
+    }
     public void UpdateLevelAppearance()
     {
         if (levelSprites != null && levelSprites.Length >= level && levelSprites[level - 1] != null)

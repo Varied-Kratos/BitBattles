@@ -677,7 +677,7 @@ public class PieceManager : MonoBehaviour
         // Улучшаем цель
         target.level++;
         target.ApplyLevelStats();
-        target.UpdateLevelAppearance(); // ← тут меняется спрайт
+        target.UpdateLevelAppearance();
 
         // Удаляем перетащенного
         if (dragged.mCurrentCell != null)
@@ -688,10 +688,13 @@ public class PieceManager : MonoBehaviour
         // Финальная вспышка
         if (targetImg != null)
         {
-            targetImg.color = new Color(1f, 0.8f, 0f); // золотой
+            targetImg.color = new Color(1f, 0.8f, 0f);
             yield return new WaitForSeconds(0.2f);
-            targetImg.color = Color.white; // ВОЗВРАЩАЕМ БЕЛЫЙ
+            targetImg.color = Color.white;
         }
+
+        // ЯВНО ОБНОВЛЯЕМ HEALTHBAR (звёзды)
+        target.RefreshHealthBar();
 
         Debug.Log($"Слияние завершено! {target.name}: HP={target.maxHP}, Урон={target.damage}, Уровень={target.level}");
     }

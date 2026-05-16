@@ -104,17 +104,31 @@ public class HealthBar : MonoBehaviour
         {
             string stars = "";
             for (int i = 0; i < mOwner.level; i++)
-                stars += "S";  // ← МЕНЯЕМ ★ НА S
+                stars += "S";
 
             mStarsText.text = stars;
-            mStarsText.fontSize = 22;
-            mStarsText.fontStyle = FontStyles.Bold;
-            mStarsText.outlineWidth = 0.4f;
-            mStarsText.outlineColor = Color.black;
+            mStarsText.overflowMode = TextOverflowModes.Overflow;
+            mStarsText.enableAutoSizing = false;
 
-            if (mOwner.level == 1) mStarsText.color = Color.gray;
-            else if (mOwner.level == 2) mStarsText.color = Color.yellow;
-            else mStarsText.color = new Color(1f, 0.5f, 0f);
+            if (mOwner.level == 1)
+            {
+                mStarsText.color = Color.white;
+                mStarsText.fontSize = 14;
+            }
+            else if (mOwner.level == 2)
+            {
+                mStarsText.color = new Color(1f, 0.8f, 0f);
+                mStarsText.fontSize = 16;
+            }
+            else
+            {
+                mStarsText.color = new Color(1f, 0.5f, 0f);
+                mStarsText.fontSize = 18;
+            }
         }
+    }
+    public void RefreshStars()
+    {
+        UpdateStars();
     }
 }
