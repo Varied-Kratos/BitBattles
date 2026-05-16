@@ -869,47 +869,59 @@ MonoBehaviour:
   draftManager: {fileID: 279308933}
   knightSprites:
   - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
-  - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
-  - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
+  - {fileID: 1041322663403210458, guid: 4b04ac5c7decf6047801c5dcd31f4f71, type: 3}
+  - {fileID: 6900936743774828852, guid: fcd145658b990d446af156d1ab851431, type: 3}
   archerSprites:
   - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
-  - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
-  - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
+  - {fileID: 590240807062181273, guid: 755f7222b32fa2e48befa6a20241daf4, type: 3}
+  - {fileID: -7906186881138314474, guid: e4925c05caa0eb94b8a19a4eda461bb2, type: 3}
   mageSprites:
   - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
-  - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
-  - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
+  - {fileID: 6409892476944426580, guid: a855fa30e5cf8ac46948c6165acb7e43, type: 3}
+  - {fileID: -4736681171692065429, guid: 696df4d01840bd94d9ae520ade10661c, type: 3}
   arrowPrefab: {fileID: 7550499526837721271, guid: ca68155f837d50e4fab9c8d54be0743f, type: 3}
   slashPrefab: {fileID: 2034020259929152121, guid: b3c86752b073028458db9e9c779f59bc, type: 3}
   magicPrefab: {fileID: 8669728063654184495, guid: a8c470b0a59e4044b82cfdd260073b81, type: 3}
   projectileSpeed: 5
   enemyKnightSprites:
   - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
-  - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
+  - {fileID: -232642532595119195, guid: 1918f2e8dff6af64a9189ad55367b622, type: 3}
   - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
   enemyArcherSprites:
   - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
-  - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
-  - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
+  - {fileID: -6464521488142253784, guid: 590f15351de131846bb73e41876441ce, type: 3}
+  - {fileID: 4169084421664045754, guid: 00b01a48a7d31cf4fb8eea75c26f5c49, type: 3}
   enemyMageSprites:
   - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
-  - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
-  - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
+  - {fileID: 3616295790549148058, guid: 7309799a5433044428630764d3e02bd4, type: 3}
+  - {fileID: -760539034540707057, guid: 6e845d6a1952e5648a536d30d7aa603c, type: 3}
   autoBattleTime: 20
   timerText: {fileID: 2066549372}
   timerPanel: {fileID: 502703061}
   knightAttackSprites:
   - {fileID: 7718910247739685050, guid: 370478dc2f8163d42a2524a23dfc574d, type: 3}
+  - {fileID: 139030716500905602, guid: 5bce97a06c29ac342bfa4bd4aa0e84a6, type: 3}
+  - {fileID: -3960050432161130111, guid: e6ebbf1d6bb8cf14bba6e9776bec20b2, type: 3}
   archerAttackSprites:
   - {fileID: 3348297188497702867, guid: 7a4a55c02b8b814499f27a90f5a05a94, type: 3}
+  - {fileID: 7322137937898960079, guid: 712e8d46b297d0a47ab97da3dc1eb42b, type: 3}
+  - {fileID: -6193933788557767476, guid: b18c401554a567b458bd645bd50fb6fc, type: 3}
   mageAttackSprites:
   - {fileID: 6598533223065435581, guid: b0d64e4699d1baf4ca5b5a02370c5669, type: 3}
+  - {fileID: 6708116078343170627, guid: 225f4e02cea2f5f44b38ff3a5bd2e9ad, type: 3}
+  - {fileID: -4085763673192435983, guid: 8c073ba18627f9749a7d27ea3a920b38, type: 3}
   enemyKnightAttackSprites:
   - {fileID: -3442505054657147600, guid: 1e78e3772531f3e4c804f816a9fd3b20, type: 3}
+  - {fileID: 436626696779147992, guid: c0d095fd2fe47284c97744c65c1e50dd, type: 3}
+  - {fileID: -7892764366944962290, guid: 1f0e4d6eeb35ea04997137a8a34b3add, type: 3}
   enemyArcherAttackSprites:
   - {fileID: 4790872413692488608, guid: 4384b21427fbe114896eb1eddc3f45ac, type: 3}
+  - {fileID: 4663377245559908026, guid: 4d6f8c4ac801c784897b912ec5f15a4e, type: 3}
+  - {fileID: -398834925389466098, guid: 00f8f007f339f334caf2c45f8153dc0f, type: 3}
   enemyMageAttackSprites:
   - {fileID: -6980733572060459599, guid: b222d7a8bfbbf2e42a88c3261276cb9a, type: 3}
+  - {fileID: -6445093044181445462, guid: 24507d75e1262ec42a74c88b83126791, type: 3}
+  - {fileID: -4919065226261219406, guid: 33031ae386a768e439ad691f11108164, type: 3}
 --- !u!114 &451089946
 MonoBehaviour:
   m_ObjectHideFlags: 0

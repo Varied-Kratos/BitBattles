@@ -66,6 +66,18 @@ public abstract class BasePiece : EventTrigger
         UpdateLevelAppearance();
         CreateHealthBar();
     }
+    private Sprite GetAttackSpriteByLevel()
+    {
+        if (attackSprites != null && attackSprites.Length >= level && attackSprites[level - 1] != null)
+            return attackSprites[level - 1];
+
+        // Если нет спрайта для уровня — берём первый доступный
+        if (attackSprites != null && attackSprites.Length > 0)
+            return attackSprites[0];
+
+        return null;
+    }
+
     public void RefreshHealthBar()
     {
         HealthBar hb = GetComponentInChildren<HealthBar>();
@@ -353,12 +365,28 @@ public abstract class BasePiece : EventTrigger
     public virtual void MoveToCell(Cell targetCell)
     {
         if (targetCell == null) return;
+
+        // ВОЗВРАЩАЕМ СПРАЙТ ПЕРЕД ДВИЖЕНИЕМ
+        if (mAttackAnimCoroutine != null)
+        {
+            StopCoroutine(mAttackAnimCoroutine);
+            mAttackAnimCoroutine = null;
+        }
+        ResetToLevelSprite();
+
         if (mCurrentCell != null) mCurrentCell.mCurrentPiece = null;
         mCurrentCell = targetCell;
         mCurrentCell.mCurrentPiece = this;
         transform.position = mCurrentCell.transform.position;
     }
-
+    private void ResetToLevelSprite()
+    {
+        Image img = GetComponent<Image>();
+        if (img != null && levelSprites != null && levelSprites.Length >= level && levelSprites[level - 1] != null)
+        {
+            img.sprite = levelSprites[level - 1];
+        }
+    }
     public virtual void TakeTurn()
     {
         BasePiece target = FindNearestEnemy();
@@ -375,41 +403,49 @@ public abstract class BasePiece : EventTrigger
             {
                 MoveToCell(next);
             }
-            // Если не можем двигаться — просто пропускаем ход
+            else
+            {
+                // Не можем двигаться — сбрасываем спрайт
+                ResetToLevelSprite();
+            }
         }
     }
 
-    private Coroutine mAttackAnimation;
+   
 
+    private Coroutine mAttackAnimation;
+    [Header("Attack Sprites")]
+    private Sprite mPreAttackSprite;
+    private Coroutine mAttackAnimCoroutine;
     public virtual void AttackTarget(BasePiece target)
     {
         target.TakeDamage(damage);
 
-        // Меняем спрайт на атакующий
-        if (attackSprites != null && attackSprites.Length > 0 && attackSprites[0] != null)
+        // Сразу меняем спрайт на атакующий
+        Sprite atkSprite = GetAttackSpriteByLevel();
+        if (atkSprite != null)
         {
             Image img = GetComponent<Image>();
             if (img != null)
             {
-                mOriginalSprite = img.sprite; // запоминаем
-                img.sprite = attackSprites[0]; // ставим атакующий
+                mPreAttackSprite = img.sprite;
+                img.sprite = atkSprite;
             }
         }
 
-        // Запускаем возврат спрайта через время
-        StartCoroutine(ResetAttackSprite());
-
-        Debug.Log($"{name} атакует {target.name} на {damage} урона");
+        // Быстрый возврат спрайта
+        if (mAttackAnimCoroutine != null) StopCoroutine(mAttackAnimCoroutine);
+        mAttackAnimCoroutine = StartCoroutine(ResetAttackSprite());
     }
 
     private IEnumerator ResetAttackSprite()
     {
-        yield return new WaitForSeconds(0.3f); // длительность атакующего спрайта
+        yield return new WaitForSeconds(0.15f); // БЫЛО 0.3, СТАЛО 0.15 — быстрее
 
         Image img = GetComponent<Image>();
-        if (img != null && mOriginalSprite != null)
+        if (img != null && mPreAttackSprite != null)
         {
-            img.sprite = mOriginalSprite;
+            img.sprite = mPreAttackSprite;
         }
     }
 
