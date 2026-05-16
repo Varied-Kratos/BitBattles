@@ -37,14 +37,14 @@ public abstract class BasePiece : EventTrigger
     public int cost = 1;
     public int unitID = 0;
 
-    
+
 
     private Vector2Int mLastDirection = Vector2Int.zero;
     private HealthBar mHealthBar;
     private CanvasGroup mCanvasGroup;
     public static bool sBattleStarted = false;
 
-   
+
     protected virtual void Awake()
     {
         mMainImage = GetComponent<Image>();
@@ -66,6 +66,18 @@ public abstract class BasePiece : EventTrigger
         UpdateLevelAppearance();
         CreateHealthBar();
     }
+    private Sprite GetAttackSpriteByLevel()
+    {
+        if (attackSprites != null && attackSprites.Length >= level && attackSprites[level - 1] != null)
+            return attackSprites[level - 1];
+
+        // Если нет спрайта для уровня — берём первый доступный
+        if (attackSprites != null && attackSprites.Length > 0)
+            return attackSprites[0];
+
+        return null;
+    }
+
     public void RefreshHealthBar()
     {
         HealthBar hb = GetComponentInChildren<HealthBar>();
@@ -127,7 +139,7 @@ public abstract class BasePiece : EventTrigger
         foreach (Cell cell in mPieceManager.mBoard.mAllCells)
         {
             // Используем mIsPlayer вместо цвета для логики зон
-            if (mIsPlayer && cell.mBoardPosition.y >= 5) continue; 
+            if (mIsPlayer && cell.mBoardPosition.y >= 5) continue;
             if (!mIsPlayer && cell.mBoardPosition.y < 5) continue;
 
             if (mPieceManager.mBoard.ValidateCell(cell.mBoardPosition.x, cell.mBoardPosition.y, this) == CellState.Free)
@@ -223,6 +235,7 @@ public abstract class BasePiece : EventTrigger
 
             // Обычная установка
             Place(mTargetCell);
+            AudioManager.Instance.PlayPlace(); // ← ЗВУК УСТАНОВКИ
         }
         else
         {
@@ -295,6 +308,7 @@ public abstract class BasePiece : EventTrigger
     public virtual void TakeDamage(int amount)
     {
         currentHP -= amount;
+        AudioManager.Instance.PlayDamage(); // ← ЗВУК УРОНА
         StartCoroutine(DamageFlash());
         if (currentHP <= 0) Die();
     }
@@ -312,11 +326,12 @@ public abstract class BasePiece : EventTrigger
 
     public virtual void Die()
     {
+        AudioManager.Instance.PlayDeath(); // ← ЗВУК СМЕРТИ
         Debug.Log($"{name} погибает");
         // Используем mIsPlayer вместо mColor
         if (mIsPlayer) mPieceManager.mMyMinis.Remove(this);
         else mPieceManager.mEnemyMinis.Remove(this);
-        
+
         if (mCurrentCell != null) mCurrentCell.mCurrentPiece = null;
         Destroy(gameObject);
     }
@@ -353,12 +368,28 @@ public abstract class BasePiece : EventTrigger
     public virtual void MoveToCell(Cell targetCell)
     {
         if (targetCell == null) return;
+
+        // ВОЗВРАЩАЕМ СПРАЙТ ПЕРЕД ДВИЖЕНИЕМ
+        if (mAttackAnimCoroutine != null)
+        {
+            StopCoroutine(mAttackAnimCoroutine);
+            mAttackAnimCoroutine = null;
+        }
+        ResetToLevelSprite();
+
         if (mCurrentCell != null) mCurrentCell.mCurrentPiece = null;
         mCurrentCell = targetCell;
         mCurrentCell.mCurrentPiece = this;
         transform.position = mCurrentCell.transform.position;
     }
-
+    private void ResetToLevelSprite()
+    {
+        Image img = GetComponent<Image>();
+        if (img != null && levelSprites != null && levelSprites.Length >= level && levelSprites[level - 1] != null)
+        {
+            img.sprite = levelSprites[level - 1];
+        }
+    }
     public virtual void TakeTurn()
     {
         BasePiece target = FindNearestEnemy();
@@ -375,41 +406,52 @@ public abstract class BasePiece : EventTrigger
             {
                 MoveToCell(next);
             }
-            // Если не можем двигаться — просто пропускаем ход
+            else
+            {
+                // Не можем двигаться — сбрасываем спрайт
+                ResetToLevelSprite();
+            }
         }
     }
 
-    private Coroutine mAttackAnimation;
 
+
+    private Coroutine mAttackAnimation;
+    [Header("Attack Sprites")]
+    private Sprite mPreAttackSprite;
+    private Coroutine mAttackAnimCoroutine;
     public virtual void AttackTarget(BasePiece target)
     {
         target.TakeDamage(damage);
+        if (this is Knight) AudioManager.Instance.PlayKnightAttack();
+        else if (this is Archer) AudioManager.Instance.PlayArcherAttack();
+        else if (this is Mage) AudioManager.Instance.PlayMageAttack();
 
-        // Меняем спрайт на атакующий
-        if (attackSprites != null && attackSprites.Length > 0 && attackSprites[0] != null)
+        // Сразу меняем спрайт на атакующий
+        Sprite atkSprite = GetAttackSpriteByLevel();
+        if (atkSprite != null)
         {
             Image img = GetComponent<Image>();
             if (img != null)
             {
-                mOriginalSprite = img.sprite; // запоминаем
-                img.sprite = attackSprites[0]; // ставим атакующий
+                mPreAttackSprite = img.sprite;
+                img.sprite = atkSprite;
             }
         }
 
-        // Запускаем возврат спрайта через время
-        StartCoroutine(ResetAttackSprite());
-
-        Debug.Log($"{name} атакует {target.name} на {damage} урона");
+        // Быстрый возврат спрайта
+        if (mAttackAnimCoroutine != null) StopCoroutine(mAttackAnimCoroutine);
+        mAttackAnimCoroutine = StartCoroutine(ResetAttackSprite());
     }
 
     private IEnumerator ResetAttackSprite()
     {
-        yield return new WaitForSeconds(0.3f); // длительность атакующего спрайта
+        yield return new WaitForSeconds(0.15f); // БЫЛО 0.3, СТАЛО 0.15 — быстрее
 
         Image img = GetComponent<Image>();
-        if (img != null && mOriginalSprite != null)
+        if (img != null && mPreAttackSprite != null)
         {
-            img.sprite = mOriginalSprite;
+            img.sprite = mPreAttackSprite;
         }
     }
 
@@ -502,7 +544,7 @@ public abstract class BasePiece : EventTrigger
 
         mOriginalCell = mCurrentCell;
         // Перемещаем в конец иерархии, чтобы юнит был ПОВЕРХ всех остальных при таскании
-        transform.SetAsLastSibling(); 
+        transform.SetAsLastSibling();
     }
 
     public override void OnBeginDrag(PointerEventData eventData)

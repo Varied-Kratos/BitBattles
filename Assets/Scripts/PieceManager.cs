@@ -143,6 +143,10 @@ public class PieceManager : MonoBehaviour
         UpdateElixirUI();
         UpdateScoreUI();
         SetupFirstRound();
+
+        // БОЕВАЯ МУЗЫКА СРАЗУ
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayBattleMusic();
     }
 
     public void Setup(Board board)
@@ -370,6 +374,8 @@ public class PieceManager : MonoBehaviour
         }
 
         SpawnUnit(unitType, Color.white, GetUnitColor(unitType), freeCell.mBoardPosition, true);
+
+        AudioManager.Instance?.PlayBuy(); // ← ДОБАВИТЬ ЗВУК
     }
 
     private Cell FindFreeCell(bool isPlayer)
@@ -398,6 +404,7 @@ public class PieceManager : MonoBehaviour
     {
         if (mBattleInProgress) return;
         StopTimer(); // ← ОСТАНАВЛИВАЕМ ТАЙМЕР
+ 
         SavePlayerUnitsBeforeBattle();
         mBattleInProgress = true;
         IsBattleActive = true;
@@ -448,9 +455,7 @@ public class PieceManager : MonoBehaviour
                     kvp.Value != null && kvp.Value.gameObject.activeSelf &&
                     kvp.Key.CanAttackTarget(kvp.Value))
                 {
-                    // ЭФФЕКТ АТАКИ
                     PlayAttackEffect(kvp.Key, kvp.Value);
-
                     kvp.Key.AttackTarget(kvp.Value);
                 }
             }
@@ -458,12 +463,27 @@ public class PieceManager : MonoBehaviour
             yield return new WaitForSeconds(turnDelay);
         }
 
-        if (mMyMinis.Count > 0 && mEnemyMinis.Count == 0) playerWins++;
-        else if (mEnemyMinis.Count > 0 && mMyMinis.Count == 0) enemyWins++;
+        bool playerWon = false;
+
+        if (mMyMinis.Count > 0 && mEnemyMinis.Count == 0)
+        {
+            playerWins++;
+            playerWon = true;
+            AudioManager.Instance?.PlayRoundWin();
+        }
+        else if (mEnemyMinis.Count > 0 && mMyMinis.Count == 0)
+        {
+            enemyWins++;
+            playerWon = false;
+            AudioManager.Instance?.PlayRoundLose();
+        }
 
         UpdateScoreUI();
         mBattleInProgress = false;
         IsBattleActive = false;
+
+        // Показываем плашку (она ждёт 2 секунды)
+        yield return ShowRoundResult(playerWon);
 
         if (playerWins >= winsToWin || enemyWins >= winsToWin)
         {
@@ -471,46 +491,57 @@ public class PieceManager : MonoBehaviour
             yield break;
         }
 
-        yield return new WaitForSeconds(2f);
+        // Переходим к следующему раунду
         currentRound++;
-        UpdateScoreUI(); // Обновляем текст раунда
+        UpdateScoreUI();
         SetupNextRound();
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayBattleMusic();
     }
     [Header("Auto Battle Timer")]
     public GameObject timerPanel; // ← Ссылка на панель Time
+    [Header("Round Result UI")]
+    public GameObject roundWinPanel;
+    public GameObject roundLosePanel;
+    private IEnumerator ShowRoundResult(bool playerWon)
+    {
+        GameObject panel = playerWon ? roundWinPanel : roundLosePanel;
 
+        if (panel != null)
+        {
+            panel.SetActive(true);
+            yield return new WaitForSeconds(2f);
+            panel.SetActive(false);
+        }
+        else
+        {
+            yield return new WaitForSeconds(2f);
+        }
+    }   
     private void EndSeries()
     {
         StopTimer();
 
-        bool isVictory = playerWins >= winsToWin;
-
-        if (isVictory)
+        if (playerWins >= winsToWin)
         {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayVictoryMusic();
+
             if (victoryPanel != null) victoryPanel.SetActive(true);
-            
-            if (PlayerDataManager.instance != null)
-            {
-                PlayerDataManager.instance.AddResult(true, 25);
-            }
+            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
         }
         else
         {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayDefeatMusic();
+
             if (defeatPanel != null) defeatPanel.SetActive(true);
-            
-            if (PlayerDataManager.instance != null)
-            {
-                PlayerDataManager.instance.AddResult(false, 15);
-            }
+            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
         }
 
-        string finalScore = $"{playerWins} - {enemyWins}";
-        
-        if (finalScoreText1 != null) finalScoreText1.text = finalScore;
-        if (finalScoreText2 != null) finalScoreText2.text = finalScore;
-
-        IsBattleActive = false;
-        BasePiece.sBattleStarted = false;
+        IsBattleActive = true;
+        BasePiece.sBattleStarted = true;
     }
     public void RestartSeries()
     {
@@ -521,7 +552,9 @@ public class PieceManager : MonoBehaviour
         UpdateScoreUI();
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (defeatPanel != null) defeatPanel.SetActive(false);
-        SetupFirstRound();
+        SetupFirstRound(); 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayBattleMusic();
     }
 
     [Header("Attack Sprites")]
@@ -681,6 +714,8 @@ public class PieceManager : MonoBehaviour
         }
 
         SpawnUnit(unitType, Color.white, GetUnitColor(unitType), cell.mBoardPosition, true);
+
+        AudioManager.Instance?.PlayBuy(); // ← ДОБАВИТЬ ЗВУК
     }
 
     // Слияние двух одинаковых юнитов
@@ -693,6 +728,7 @@ public class PieceManager : MonoBehaviour
         Debug.Log($"⭐ СЛИЯНИЕ: {dragged.name} → {target.name} → уровень {target.level + 1}!");
 
         // Эффект слияния
+        AudioManager.Instance.PlayFusion(); // ← ЗВУК СЛИЯНИЯ
         StartCoroutine(FusionEffect(target, dragged));
     }
 

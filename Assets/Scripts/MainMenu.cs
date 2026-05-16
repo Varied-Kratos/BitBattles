@@ -14,12 +14,11 @@ public class MainMenu : MonoBehaviour
 
     [Header("Editing Name")]
     public TMP_InputField nameInputField;
-    private void Start()
+    void Start()
     {
-        // При запуске игры сразу подтягиваем цифры
-        UpdateProfileUI();
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayMenuMusic();
     }
-
     public void ClickChangeName()
     {
         nameInputField.gameObject.SetActive(true); // Показываем поле
@@ -64,6 +63,7 @@ public class MainMenu : MonoBehaviour
     }
     public void PlayGame()
     {
+        AudioManager.Instance.PlayButton(); // ← ЗВУК КНОПКИ
         SceneManager.LoadScene("BattleScene");
     }
 

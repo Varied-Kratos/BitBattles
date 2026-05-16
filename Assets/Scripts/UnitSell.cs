@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
@@ -17,7 +17,7 @@ public class SellZone : MonoBehaviour, IDropHandler
 
     public void OnDrop(PointerEventData eventData)
     {
-        // Получаем перетаскиваемый объект
+        // РџРѕР»СѓС‡Р°РµРј РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјС‹Р№ РѕР±СЉРµРєС‚
         GameObject droppedObject = eventData.pointerDrag;
         if (droppedObject != null)
         {
@@ -37,7 +37,7 @@ public class SellZone : MonoBehaviour, IDropHandler
         if (pm != null)
         {
             pm.RefundElixir(refund);
-            Debug.Log($"{piece.name} продан! +{refund} эликсира (уровень {piece.level})");
+            Debug.Log($"{piece.name} РїСЂРѕРґР°РЅ! +{refund} СЌР»РёРєСЃРёСЂР° (СѓСЂРѕРІРµРЅСЊ {piece.level})");
         }
 
         if (piece.mCurrentCell != null)
@@ -45,11 +45,11 @@ public class SellZone : MonoBehaviour, IDropHandler
 
         if (pm != null)
             pm.mMyMinis.Remove(piece);
-
+        AudioManager.Instance.PlaySell(); // в†ђ Р—Р’РЈРљ РџР РћР”РђР–Р
         Destroy(piece.gameObject);
     }
 
-    // Подсветка при наведении (опционально)
+    // РџРѕРґСЃРІРµС‚РєР° РїСЂРё РЅР°РІРµРґРµРЅРёРё (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
     void OnPointerEnter()
     {
         if (mImage != null)

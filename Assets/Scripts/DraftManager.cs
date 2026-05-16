@@ -112,6 +112,7 @@ public class DraftManager : MonoBehaviour
         if (BasePiece.sBattleStarted) return;
         System.Type type = slots[index].unitType;
         pieceManager.PurchaseUnit(type);
+        AudioManager.Instance?.PlayBuy();
         RefreshDraft();
     }
 
@@ -156,6 +157,7 @@ public class DraftManager : MonoBehaviour
                 if (targetCell.mBoardPosition.y < 5)
                 {
                     pieceManager.PurchaseUnitAtCell(mDraggedType, targetCell);
+                    AudioManager.Instance?.PlayBuy();
                     RefreshDraft();
                 }
             }

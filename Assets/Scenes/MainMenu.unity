@@ -1026,6 +1026,76 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &632352543
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 632352545}
+  - component: {fileID: 632352544}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &632352544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 632352543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21742472e20519b4bb17affc75eda307, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  masterVolume: 1
+  uiVolume: 0.7
+  battleVolume: 0.08
+  gameVolume: 0.463
+  buttonClick: {fileID: 8300000, guid: 30efa9648634da1419b4cacf24624548, type: 3}
+  unitPlace: {fileID: 8300000, guid: f16e9630dde45ab43ae06af532b4ccc9, type: 3}
+  unitSell: {fileID: 8300000, guid: 579b6814738ad2a4c823ff600e0c7e7d, type: 3}
+  unitBuy: {fileID: 8300000, guid: 9be61fd2f3cc1a442a4d229811f46e16, type: 3}
+  coinEarn: {fileID: 0}
+  knightAttack: {fileID: 8300000, guid: 3330fa0b888aae74a9de18472fe6d53a, type: 3}
+  archerAttack: {fileID: 8300000, guid: 98ceeab2be818ee4a9fb34d7cf8869e3, type: 3}
+  mageAttack: {fileID: 8300000, guid: 615ed89e11d7c4c4697c7be63048c951, type: 3}
+  damageTaken: {fileID: 8300000, guid: 9deb5440cef79ec40bfe8f2cbc013a40, type: 3}
+  unitDeath: {fileID: 8300000, guid: b6c1030c53e73f64c8257fe4152f7ffd, type: 3}
+  unitFusion: {fileID: 8300000, guid: e8b143783d00e594286f0599179f6408, type: 3}
+  victory: {fileID: 0}
+  defeat: {fileID: 0}
+  roundStart: {fileID: 0}
+  menuMusic: {fileID: 8300000, guid: 26505c275ad2b2b4f98d93477da7b738, type: 3}
+  battleMusic: {fileID: 8300000, guid: 2c3c46a9c50a72f408d202a8d974f432, type: 3}
+  victoryMusic: {fileID: 8300000, guid: e366fb1e62ea1194a8e9287ebfaf1b03, type: 3}
+  defeatMusic: {fileID: 8300000, guid: 34b38f2cf6dadbb43bad0fd54abd6e67, type: 3}
+  musicVolume: 0.3
+  roundWin: {fileID: 8300000, guid: a3047ccb1607f10448eb39ba5094e3f0, type: 3}
+  roundLose: {fileID: 8300000, guid: b125468f8ee84f642964abd3dea7345f, type: 3}
+  roundVolume: 0.8
+--- !u!4 &632352545
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 632352543}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 784.369, y: 559.16583, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &649380165
 GameObject:
   m_ObjectHideFlags: 0
@@ -1514,6 +1584,98 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 765500206}
   m_CullTransparentMesh: 1
+--- !u!1 &857245040
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 857245043}
+  - component: {fileID: 857245042}
+  - component: {fileID: 857245041}
+  m_Layer: 0
+  m_Name: Camera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!81 &857245041
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 857245040}
+  m_Enabled: 1
+--- !u!20 &857245042
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 857245040}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 1
+  orthographic size: 824.0383
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!4 &857245043
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 857245040}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 784.369, y: 559.16583, z: -10}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1109760325
 GameObject:
   m_ObjectHideFlags: 0
@@ -3664,3 +3826,5 @@ SceneRoots:
   - {fileID: 1558454001}
   - {fileID: 1954587304}
   - {fileID: 519420032}
+  - {fileID: 632352545}
+  - {fileID: 857245043}

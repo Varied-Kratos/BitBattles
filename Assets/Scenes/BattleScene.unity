@@ -870,47 +870,61 @@ MonoBehaviour:
   draftManager: {fileID: 279308933}
   knightSprites:
   - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
-  - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
-  - {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
+  - {fileID: 1041322663403210458, guid: f1504cddd93935b488361a92e8ced8e3, type: 3}
+  - {fileID: 6900936743774828852, guid: fbe09b416319113408593132930edee4, type: 3}
   archerSprites:
   - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
-  - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
-  - {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
+  - {fileID: 590240807062181273, guid: 4abb33ccba1889a4c9b4f136c12fe32c, type: 3}
+  - {fileID: -7906186881138314474, guid: bbd9347e20523f34c982f13fbb07af98, type: 3}
   mageSprites:
   - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
-  - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
-  - {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
+  - {fileID: -3441425386165372508, guid: 91c3bcaf4a6883f4689afc5fb8844c10, type: 3}
+  - {fileID: 7313078452005620126, guid: f9003a006b9afcf46b591e15f206b291, type: 3}
   arrowPrefab: {fileID: 7550499526837721271, guid: ca68155f837d50e4fab9c8d54be0743f, type: 3}
   slashPrefab: {fileID: 2034020259929152121, guid: b3c86752b073028458db9e9c779f59bc, type: 3}
   magicPrefab: {fileID: 8669728063654184495, guid: a8c470b0a59e4044b82cfdd260073b81, type: 3}
   projectileSpeed: 5
   enemyKnightSprites:
   - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
-  - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
-  - {fileID: 2680444822025958939, guid: a72213156049e8d4782466ae5d100f14, type: 3}
+  - {fileID: -414914849113767973, guid: 90f08c00c6ba31f49ab0207a663f311a, type: 3}
+  - {fileID: -760539034540707057, guid: d496614e4cf056048910db91d06e4c77, type: 3}
   enemyArcherSprites:
   - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
-  - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
-  - {fileID: 7570397775606481276, guid: 8ec7ffc586ebc4a42885404789891f81, type: 3}
+  - {fileID: -6464521488142253784, guid: 68727e811c343de48951515cc9850a2c, type: 3}
+  - {fileID: 4169084421664045754, guid: 5fb775ebaa52b5f4592b9a44dc60fb28, type: 3}
   enemyMageSprites:
   - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
-  - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
-  - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
+  - {fileID: -4919065226261219406, guid: defa08cecdc0ca143a8aa3f278477a46, type: 3}
+  - {fileID: -2162593613674392480, guid: f4df1f35408de8f4d86bed4811e6d799, type: 3}
   autoBattleTime: 20
   timerText: {fileID: 2066549372}
   timerPanel: {fileID: 502703061}
+  roundWinPanel: {fileID: 1939991445}
+  roundLosePanel: {fileID: 2036867572}
   knightAttackSprites:
   - {fileID: 7718910247739685050, guid: 370478dc2f8163d42a2524a23dfc574d, type: 3}
+  - {fileID: 139030716500905602, guid: c1ff6d860b12bcc489404d47ff7ffa42, type: 3}
+  - {fileID: -3960050432161130111, guid: e22f59b02b6226b479bfa8f7ba53622a, type: 3}
   archerAttackSprites:
   - {fileID: 3348297188497702867, guid: 7a4a55c02b8b814499f27a90f5a05a94, type: 3}
+  - {fileID: 7322137937898960079, guid: b5de5649752ef68449fc59b14b8c95c4, type: 3}
+  - {fileID: -6193933788557767476, guid: 86cb0e73dfdfee443bb4bce8b2266b3b, type: 3}
   mageAttackSprites:
   - {fileID: 6598533223065435581, guid: b0d64e4699d1baf4ca5b5a02370c5669, type: 3}
+  - {fileID: 6708116078343170627, guid: fe58b7ecca955564c87437114e1227ff, type: 3}
+  - {fileID: -4085763673192435983, guid: f34c89393f07df947ba39708c0e23f4e, type: 3}
   enemyKnightAttackSprites:
   - {fileID: -3442505054657147600, guid: 1e78e3772531f3e4c804f816a9fd3b20, type: 3}
+  - {fileID: 436626696779147992, guid: 5b778516c69d24c42a119cdda9bd5327, type: 3}
+  - {fileID: -7892764366944962290, guid: 3e60efd592a297b4aaf0231c1589f608, type: 3}
   enemyArcherAttackSprites:
   - {fileID: 4790872413692488608, guid: 4384b21427fbe114896eb1eddc3f45ac, type: 3}
+  - {fileID: 4663377245559908026, guid: fee7105008ebb9046848e87893d68339, type: 3}
+  - {fileID: -398834925389466098, guid: 14f2cea33fd8b6e478ff24b1adc05fc2, type: 3}
   enemyMageAttackSprites:
   - {fileID: -6980733572060459599, guid: b222d7a8bfbbf2e42a88c3261276cb9a, type: 3}
+  - {fileID: -6445093044181445462, guid: fead1922916ae184d9c41f0fd6afde83, type: 3}
+  - {fileID: -4919065226261219406, guid: defa08cecdc0ca143a8aa3f278477a46, type: 3}
 --- !u!114 &451089946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1990,6 +2004,8 @@ RectTransform:
   - {fileID: 502703062}
   - {fileID: 549962100}
   - {fileID: 1445966585}
+  - {fileID: 1939991446}
+  - {fileID: 2036867573}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -4030,6 +4046,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1939991445
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1939991446}
+  - component: {fileID: 1939991448}
+  - component: {fileID: 1939991447}
+  m_Layer: 5
+  m_Name: WinPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &1939991446
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1939991445}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 844583158}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -563.43, y: 15}
+  m_SizeDelta: {x: -1208.8, y: -656.67}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1939991447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1939991445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1939991448
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1939991445}
+  m_CullTransparentMesh: 1
 --- !u!1 &1966835823
 GameObject:
   m_ObjectHideFlags: 0
@@ -4422,6 +4513,81 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &2036867572
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2036867573}
+  - component: {fileID: 2036867575}
+  - component: {fileID: 2036867574}
+  m_Layer: 5
+  m_Name: LosePanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &2036867573
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036867572}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 844583158}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -563.43, y: 15}
+  m_SizeDelta: {x: -1208.8, y: -656.67}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2036867574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036867572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &2036867575
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036867572}
+  m_CullTransparentMesh: 1
 --- !u!1 &2066549370
 GameObject:
   m_ObjectHideFlags: 0
