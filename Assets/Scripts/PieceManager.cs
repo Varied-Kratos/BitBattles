@@ -25,6 +25,7 @@ public class PieceManager : MonoBehaviour
     public List<BasePiece> mMyMinis = new List<BasePiece>();
     public List<BasePiece> mEnemyMinis = new List<BasePiece>();
     public Board mBoard;
+    public PythonConnector pythonConnector;
 
     [Header("Shop Sprites")]
     public Sprite knightShopSprite;
@@ -153,7 +154,13 @@ public class PieceManager : MonoBehaviour
     {
         ClearAllUnits();
         savedPlayerUnits.Clear();
-        SpawnEnemiesForRound(1);
+
+        if (pythonConnector != null) {
+            pythonConnector.RequestNextLayout(); 
+        } else {
+            Debug.LogError("Ссылка на PythonConnector не назначена в инспекторе!");
+        }
+
         currentElixir = maxElixir;
         UpdateElixirUI();
         BasePiece.sBattleStarted = false;
@@ -169,7 +176,11 @@ public class PieceManager : MonoBehaviour
     {
         ClearAllUnits();
         RestorePlayerUnits();
-        SpawnEnemiesForRound(currentRound);
+        if (pythonConnector != null) {
+            pythonConnector.RequestNextLayout(); 
+        } else {
+            Debug.LogError("Ссылка на PythonConnector не назначена в инспекторе!");
+        }
 
         int elixirBonus = 4;
         currentElixir += elixirBonus;
@@ -284,39 +295,6 @@ public class PieceManager : MonoBehaviour
             case "Archer": return new Color32(80, 200, 100, 255);
             case "Mage": return new Color32(200, 80, 200, 255);
             default: return new Color32(200, 200, 200, 255);
-        }
-    }
-
-    private void SpawnEnemiesForRound(int round)
-    {
-        switch (round)
-        {
-            case 1:
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
-                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
-                break;
-            case 2:
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(1, 8), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
-                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
-                break;
-            case 3:
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(1, 8), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(0, 9), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(3, 9), false);
-                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(4, 9), false);
-                break;
-            default:
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(2, 9), false);
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(0, 8), false);
-                SpawnUnit(typeof(Knight), Color.black, new Color32(210, 95, 64, 255), new Vector2Int(4, 8), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(1, 9), false);
-                SpawnUnit(typeof(Archer), Color.black, new Color32(200, 50, 50, 255), new Vector2Int(3, 9), false);
-                SpawnUnit(typeof(Mage), Color.black, new Color32(180, 50, 180, 255), new Vector2Int(2, 8), false);
-                break;
         }
     }
 

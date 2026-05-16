@@ -849,6 +849,7 @@ MonoBehaviour:
   mMyMinis: []
   mEnemyMinis: []
   mBoard: {fileID: 451089946}
+  pythonConnector: {fileID: 937075409}
   knightShopSprite: {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
   archerShopSprite: {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
   mageShopSprite: {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}

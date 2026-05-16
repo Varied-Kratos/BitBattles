@@ -35,8 +35,8 @@ class GAManager:
         total_cost = sum(self.unit_costs[u] for u in ind)
         
         if total_cost > self.max_elixir:
-            # Увеличиваем штраф в 10 раз, чтобы ИИ было ОЧЕНЬ больно за перебор
-            final_fitness = -1000.0 - (total_cost * 100) 
+            # Увеличиваем штраф в 100 раз, чтобы ИИ было ОЧЕНЬ больно за перебор
+            final_fitness = -10.0 - (total_cost) 
         else:
             final_fitness = raw_fitness
                 
