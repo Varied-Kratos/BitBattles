@@ -40,10 +40,10 @@ public class PieceManager : MonoBehaviour
     public int currentElixir;
     public TextMeshProUGUI elixirText;
 
-    [Header("Best of 5")]
+    [Header("Best of 9")]
     public int playerWins = 0;
     public int enemyWins = 0;
-    public int winsToWin = 3;
+    public int winsToWin = 5;
     public int currentRound = 1;
     public TextMeshProUGUI roundText;
     public TextMeshProUGUI scoreText;
@@ -161,6 +161,8 @@ public class PieceManager : MonoBehaviour
         mBattleInProgress = false;
 
         if (draftManager != null) draftManager.RefreshDraft();
+
+        StartTimer(); // ← ЗАПУСК ТАЙМЕРА
     }
 
     public void SetupNextRound()
@@ -178,6 +180,46 @@ public class PieceManager : MonoBehaviour
         mBattleInProgress = false;
 
         if (draftManager != null) draftManager.RefreshDraft();
+
+        StartTimer(); // ← ЗАПУСК ТАЙМЕРА
+    }
+
+    public void StartTimer()
+    {
+        mTimer = autoBattleTime;
+        mTimerActive = true;
+        if (timerText != null) timerText.gameObject.SetActive(true);
+    }
+
+    public void StopTimer()
+    {
+        mTimerActive = false;
+        if (timerText != null) timerText.gameObject.SetActive(false);
+    }
+
+    private void Update()
+    {
+        if (!mTimerActive) return;
+
+        mTimer -= Time.deltaTime;
+
+        if (timerText != null)
+        {
+            int seconds = Mathf.CeilToInt(mTimer);
+            timerText.text = $"{seconds}";
+
+            // Красный цвет если меньше 5 секунд
+            if (seconds <= 5)
+                timerText.color = Color.red;
+            else
+                timerText.color = Color.white;
+        }
+
+        if (mTimer <= 0f)
+        {
+            StopTimer();
+            StartBattle();
+        }
     }
 
     private void SavePlayerUnitsBeforeBattle()
@@ -320,9 +362,13 @@ public class PieceManager : MonoBehaviour
     private void UpdateScoreUI()
     {
         if (scoreText != null) scoreText.text = $"Вы {playerWins} - {enemyWins} Враг";
-        if (roundText != null) roundText.text = $"Раунд {currentRound}/5";
+        if (roundText != null) roundText.text = $"Раунд {currentRound}/9";
     }
-
+    [Header("Auto Battle Timer")]
+    public float autoBattleTime = 20f;
+    private float mTimer;
+    public TextMeshProUGUI timerText;
+    private bool mTimerActive = false;
     public void PurchaseUnit(System.Type unitType)
     {
         if (BasePiece.sBattleStarted) return;
@@ -370,6 +416,7 @@ public class PieceManager : MonoBehaviour
     public void StartBattle()
     {
         if (mBattleInProgress) return;
+        StopTimer(); // ← ОСТАНАВЛИВАЕМ ТАЙМЕР
         SavePlayerUnitsBeforeBattle();
         mBattleInProgress = true;
         IsBattleActive = true;
