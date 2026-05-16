@@ -188,13 +188,15 @@ public class PieceManager : MonoBehaviour
     {
         mTimer = autoBattleTime;
         mTimerActive = true;
-        if (timerText != null) timerText.gameObject.SetActive(true);
+        if (timerPanel != null)
+            timerPanel.SetActive(true);
     }
 
     public void StopTimer()
     {
         mTimerActive = false;
-        if (timerText != null) timerText.gameObject.SetActive(false);
+        if (timerPanel != null)
+            timerPanel.SetActive(false);
     }
 
     private void Update()
@@ -364,6 +366,7 @@ public class PieceManager : MonoBehaviour
         if (scoreText != null) scoreText.text = $"Вы {playerWins} - {enemyWins} Враг";
         if (roundText != null) roundText.text = $"Раунд {currentRound}/9";
     }
+
     [Header("Auto Battle Timer")]
     public float autoBattleTime = 20f;
     private float mTimer;
@@ -490,13 +493,17 @@ public class PieceManager : MonoBehaviour
             yield break;
         }
 
-        currentRound++;
         yield return new WaitForSeconds(2f);
+        currentRound++;
+        UpdateScoreUI(); // Обновляем текст раунда
         SetupNextRound();
     }
+    [Header("Auto Battle Timer")]
+    public GameObject timerPanel; // ← Ссылка на панель Time
 
     private void EndSeries()
     {
+        StopTimer(); // ← ОСТАНАВЛИВАЕМ ТАЙМЕР
         if (playerWins >= winsToWin)
         {
             if (victoryPanel != null) victoryPanel.SetActive(true);
@@ -526,6 +533,7 @@ public class PieceManager : MonoBehaviour
         playerWins = 0;
         enemyWins = 0;
         currentRound = 1;
+        winsToWin = 5; // ← ДОБАВЬ ЭТО (на случай если менялось)
         UpdateScoreUI();
         if (victoryPanel != null) victoryPanel.SetActive(false);
         if (defeatPanel != null) defeatPanel.SetActive(false);

@@ -858,7 +858,7 @@ MonoBehaviour:
   elixirText: {fileID: 2075555477}
   playerWins: 0
   enemyWins: 0
-  winsToWin: 3
+  winsToWin: 5
   currentRound: 1
   roundText: {fileID: 1966835824}
   scoreText: {fileID: 473645725}
@@ -897,6 +897,7 @@ MonoBehaviour:
   - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
   autoBattleTime: 20
   timerText: {fileID: 2066549372}
+  timerPanel: {fileID: 502703061}
   knightAttackSprites:
   - {fileID: 7718910247739685050, guid: 370478dc2f8163d42a2524a23dfc574d, type: 3}
   archerAttackSprites:
@@ -1860,9 +1861,9 @@ RectTransform:
   - {fileID: 409011523}
   - {fileID: 979558028}
   - {fileID: 903051922}
+  - {fileID: 502703062}
   - {fileID: 549962100}
   - {fileID: 1445966585}
-  - {fileID: 502703062}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3657,7 +3658,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u0420\u0430\u0443\u043D\u0434 1/5"
+  m_text: "\u0420\u0430\u0443\u043D\u0434 1/9"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 837065cd162cd274abbc8ecb175a5285, type: 2}
   m_sharedMaterial: {fileID: 6656726982515554826, guid: 837065cd162cd274abbc8ecb175a5285, type: 2}
