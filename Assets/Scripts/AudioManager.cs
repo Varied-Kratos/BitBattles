@@ -43,6 +43,24 @@ public class AudioManager : MonoBehaviour
     public AudioClip roundWin;
     public AudioClip roundLose;
     [Range(0f, 1f)] public float roundVolume = 0.8f;
+
+    [Header("Timer Sounds")]
+    public AudioClip timerTick;
+    [Range(0f, 1f)] public float timerVolume = 0.4f;
+
+    public void PlayTimerTick() => PlaySound(timerTick, timerVolume);
+    public void StopTimerTick()
+    {
+        if (timerTick != null)
+            mAudioSource.Stop(); // Полностью останавливаем звук
+    }
+    public void UpdateMusicVolume()
+    {
+        if (mMusicSource != null)
+        {
+            mMusicSource.volume = musicVolume * masterVolume;
+        }
+    }
     public void PlayRoundWin() => PlaySound(roundWin, gameVolume);
     public void PlayRoundLose() => PlaySound(roundLose, gameVolume);
 
@@ -60,15 +78,16 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        // Для звуков
         mAudioSource = gameObject.AddComponent<AudioSource>();
         mAudioSource.playOnAwake = false;
 
-        // Для музыки (отдельный источник)
         mMusicSource = gameObject.AddComponent<AudioSource>();
-        mMusicSource.loop = true; // Зацикливаем
+        mMusicSource.loop = true;
         mMusicSource.playOnAwake = false;
-        mMusicSource.volume = musicVolume;
+
+        // Загружаем сохранённую громкость
+        musicVolume = PlayerPrefs.GetFloat("MusicVolume", 0.3f);
+        UpdateMusicVolume();
     }
 
     private void PlaySound(AudioClip clip, float volume)

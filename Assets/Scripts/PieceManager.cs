@@ -203,6 +203,7 @@ public class PieceManager : MonoBehaviour
     {
         mTimer = autoBattleTime;
         mTimerActive = true;
+        mTimerSoundPlayed = false; // ← СБРАСЫВАЕМ ФЛАГ
         if (timerPanel != null)
             timerPanel.SetActive(true);
     }
@@ -213,7 +214,7 @@ public class PieceManager : MonoBehaviour
         if (timerPanel != null)
             timerPanel.SetActive(false);
     }
-
+    private bool mTimerSoundPlayed = false; // чтобы не спамить звук каждый кадр
     private void Update()
     {
         if (!mTimerActive) return;
@@ -225,16 +226,27 @@ public class PieceManager : MonoBehaviour
             int seconds = Mathf.CeilToInt(mTimer);
             timerText.text = $"{seconds}";
 
-            // Красный цвет если меньше 5 секунд
             if (seconds <= 5)
+            {
                 timerText.color = Color.red;
+
+                if (!mTimerSoundPlayed && AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlayTimerTick();
+                    mTimerSoundPlayed = true;
+                }
+            }
             else
+            {
                 timerText.color = Color.white;
+            }
         }
 
-        if (mTimer <= 0f && mTimerActive)
+        // ВОТ ЗДЕСЬ — это конец метода Update:
+        if (mTimer <= 0f)
         {
             StopTimer();
+            AudioManager.Instance?.StopTimerTick(); // ← ДОБАВЬ ЭТУ СТРОКУ
             StartBattle();
         }
     }
@@ -403,8 +415,12 @@ public class PieceManager : MonoBehaviour
     public void StartBattle()
     {
         if (mBattleInProgress) return;
-        StopTimer(); // ← ОСТАНАВЛИВАЕМ ТАЙМЕР
- 
+
+        StopTimer();
+
+        // Останавливаем звук таймера
+        AudioManager.Instance?.StopTimerTick();
+
         SavePlayerUnitsBeforeBattle();
         mBattleInProgress = true;
         IsBattleActive = true;
