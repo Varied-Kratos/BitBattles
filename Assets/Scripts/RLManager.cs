@@ -21,7 +21,18 @@ public class RLManager : MonoBehaviour
     // Ссылки на менеджеры
     public PieceManager pieceManager;
     public Board board;
+    void Start()
+    {
+        if (useRL)
+            ConnectToPython();
+    }
 
+    void Update()
+    {
+        // Повторная попытка подключения, если не подключены
+        if (useRL && !mConnected)
+            ConnectToPython();
+    }
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -49,67 +60,65 @@ public class RLManager : MonoBehaviour
     // === Сбор состояния одного юнита ===
     public float[] GetUnitState(BasePiece unit)
     {
+        float[] s = new float[17]; // всегда 17
         if (unit == null || unit.mCurrentCell == null)
-            return new float[0];
+            return s;
 
-        var state = new List<float>();
+        Vector2Int pos = unit.mCurrentCell.mBoardPosition;
 
-        // 1. Нормализованные координаты (0..1)
-        state.Add(unit.mCurrentCell.mBoardPosition.x / 4f);
-        state.Add(unit.mCurrentCell.mBoardPosition.y / 9f);
+        // 0-1: координаты
+        s[0] = pos.x / 4f;
+        s[1] = pos.y / 9f;
 
-        // 2. HP (нормализовано)
-        state.Add((float)unit.currentHP / unit.maxHP);
+        // 2: HP
+        s[2] = (float)unit.currentHP / unit.maxHP;
 
-        // 3. Уровень (1/3, 2/3, 3/3)
-        state.Add(unit.level / 3f);
+        // 3: уровень
+        s[3] = unit.level / 3f;
 
-        // 4. Тип юнита (1=Knight, 2=Archer, 3=Mage)
-        state.Add(unit.unitID / 3f);
+        // 4: тип юнита
+        s[4] = unit.unitID / 3f;
 
-        // 5. Ближайший враг
+        // 5-8: ближайший враг
         BasePiece enemy = unit.FindNearestEnemy();
-        if (enemy != null)
+        if (enemy != null && enemy.mCurrentCell != null)
         {
-            Vector2Int enemyPos = enemy.mCurrentCell.mBoardPosition;
-            state.Add(enemyPos.x / 4f);
-            state.Add(enemyPos.y / 9f);
-            state.Add(enemy.unitID / 3f);
-            state.Add(unit.CanAttackTarget(enemy) ? 1f : 0f);
+            s[5] = enemy.mCurrentCell.mBoardPosition.x / 4f;
+            s[6] = enemy.mCurrentCell.mBoardPosition.y / 9f;
+            s[7] = enemy.unitID / 3f;
+            s[8] = unit.CanAttackTarget(enemy) ? 1f : 0f;
         }
         else
         {
-            state.Add(-1f); state.Add(-1f); state.Add(-1f); state.Add(-1f);
+            s[5] = 0f; s[6] = 0f; s[7] = 0f; s[8] = 0f;
         }
 
-        // 6. 8 соседних клеток (что на них?)
-        Vector2Int pos = unit.mCurrentCell.mBoardPosition;
-        Vector2Int[] dirs = {
-            new Vector2Int(0,1), new Vector2Int(1,1), new Vector2Int(1,0), new Vector2Int(1,-1),
-            new Vector2Int(0,-1), new Vector2Int(-1,-1), new Vector2Int(-1,0), new Vector2Int(-1,1)
-        };
-        foreach (var d in dirs)
+        // 9-16: 8 соседних клеток
+        int[] dx = { 0, 1, 1, 1, 0, -1, -1, -1 };
+        int[] dy = { 1, 1, 0, -1, -1, -1, 0, 1 };
+        for (int i = 0; i < 8; i++)
         {
-            int nx = pos.x + d.x;
-            int ny = pos.y + d.y;
+            int nx = pos.x + dx[i];
+            int ny = pos.y + dy[i];
             if (nx < 0 || nx >= 5 || ny < 0 || ny >= 10)
-                state.Add(-1f); // стена
+            {
+                s[9 + i] = -1f;
+            }
             else
             {
                 Cell cell = board.mAllCells[nx, ny];
-                if (cell.mCurrentPiece == null) state.Add(0f); // пусто
+                if (cell == null || cell.mCurrentPiece == null)
+                    s[9 + i] = 0f;
                 else
                 {
-                    // свой или враг?
                     BasePiece other = cell.mCurrentPiece;
-                    bool sameTeam = (unit.name.Contains("Player") && other.name.Contains("Player")) ||
-                                    (!unit.name.Contains("Player") && !other.name.Contains("Player"));
-                    state.Add(sameTeam ? 1f : 2f);
+                    bool sameTeam = unit.name.Contains("Player") == other.name.Contains("Player");
+                    s[9 + i] = sameTeam ? 1f : 2f;
                 }
             }
         }
 
-        return state.ToArray();
+        return s;
     }
 
     // === Отправка состояния и получение действия ===
@@ -117,10 +126,17 @@ public class RLManager : MonoBehaviour
     {
         if (!mConnected) return UnityEngine.Random.Range(0, 5);
 
+        // Обрезаем до 17 (на всякий случай)
+        float[] safe = new float[17];
+        Array.Copy(state, safe, Math.Min(state.Length, 17));
+
+        // Формируем JSON с инвариантной культурой (точка в числах)
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        string numbers = string.Join(",", System.Array.ConvertAll(safe, x => x.ToString(culture)));
+        string json = $"{{\"state\":[{numbers}],\"reward\":{reward.ToString(culture)},\"done\":{done.ToString().ToLower()},\"unit_id\":\"{unitId}\"}}";
+
         try
         {
-            // Формируем JSON с состоянием, наградой и флагом завершения
-            string json = $"{{\"state\":[{string.Join(",", state)}],\"reward\":{reward},\"done\":{done.ToString().ToLower()},\"unit_id\":\"{unitId}\"}}";
             byte[] data = Encoding.UTF8.GetBytes(json + "\n");
             mStream.Write(data, 0, data.Length);
 
