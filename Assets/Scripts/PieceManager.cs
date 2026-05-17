@@ -539,22 +539,32 @@ public class PieceManager : MonoBehaviour
     {
         StopTimer();
 
-        if (playerWins >= winsToWin)
+        bool isTotalWin = playerWins >= winsToWin;
+        
+        // 1. Начисляем кубки и ставим защиту от "минуса"
+        if (PlayerDataManager.instance != null)
         {
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayVictoryMusic();
+            // Если проигрыш, вычитаем 10, но в PlayerDataManager 
+            // сработает Mathf.Max(0, ...), так что ниже нуля не упадем.
+            PlayerDataManager.instance.AddResult(isTotalWin, isTotalWin ? 25 : 10);
+        }
 
+        // 2. Показываем нужную панель
+        if (isTotalWin)
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayVictoryMusic();
             if (victoryPanel != null) victoryPanel.SetActive(true);
-            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
         }
         else
         {
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayDefeatMusic();
-
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayDefeatMusic();
             if (defeatPanel != null) defeatPanel.SetActive(true);
-            if (finalScoreText1 != null) finalScoreText1.text = $"{playerWins} - {enemyWins}";
         }
+
+        // 3. Исправляем отображение счета (обновляем оба поля на всякий случай)
+        string finalScoreStr = $"{playerWins} - {enemyWins}";
+        if (finalScoreText1 != null) finalScoreText1.text = finalScoreStr;
+        if (finalScoreText2 != null) finalScoreText2.text = finalScoreStr;
 
         IsBattleActive = true;
         BasePiece.sBattleStarted = true;
