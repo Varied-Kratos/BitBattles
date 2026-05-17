@@ -595,6 +595,7 @@ public class PieceManager : MonoBehaviour
     {
         Cell targetCell = mBoard.mAllCells[pos.x, pos.y];
 
+        
         BasePiece template = null;
         if (unitType == typeof(Knight)) template = knightPrefab;
         else if (unitType == typeof(Archer)) template = archerPrefab;
@@ -606,17 +607,14 @@ public class PieceManager : MonoBehaviour
             return null;
         }
 
+        
         GameObject newPieceObject = Instantiate(mPiecePrefab, transform);
         newPieceObject.transform.localScale = Vector3.one;
         newPieceObject.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
 
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
-        if (unitType == typeof(Knight))
-            newPiece.levelSprites = knightSprites;
-        else if (unitType == typeof(Archer))
-            newPiece.levelSprites = archerSprites;
-        else if (unitType == typeof(Mage))
-            newPiece.levelSprites = mageSprites;
+
+        
         newPiece.maxHP = template.maxHP;
         newPiece.currentHP = template.maxHP;
         newPiece.damage = template.damage;
@@ -625,46 +623,39 @@ public class PieceManager : MonoBehaviour
         newPiece.unitID = template.unitID;
         newPiece.cost = GetUnitCost(unitType);
 
+        
         if (isPlayer)
         {
-            if (unitType == typeof(Knight)) newPiece.levelSprites = knightSprites;
-            else if (unitType == typeof(Archer)) newPiece.levelSprites = archerSprites;
-            else newPiece.levelSprites = mageSprites;
+            if (unitType == typeof(Knight)) { newPiece.levelSprites = knightSprites; newPiece.attackSprites = knightAttackSprites; }
+            else if (unitType == typeof(Archer)) { newPiece.levelSprites = archerSprites; newPiece.attackSprites = archerAttackSprites; }
+            else if (unitType == typeof(Mage)) { newPiece.levelSprites = mageSprites; newPiece.attackSprites = mageAttackSprites; }
         }
         else
         {
-            if (unitType == typeof(Knight)) newPiece.levelSprites = enemyKnightSprites;
-            else if (unitType == typeof(Archer)) newPiece.levelSprites = enemyArcherSprites;
-            else newPiece.levelSprites = enemyMageSprites;
-        }
-        if (isPlayer)
-        {
-            if (unitType == typeof(Knight)) newPiece.attackSprites = knightAttackSprites;
-            else if (unitType == typeof(Archer)) newPiece.attackSprites = archerAttackSprites;
-            else newPiece.attackSprites = mageAttackSprites;
-        }
-        else
-        {
-            if (unitType == typeof(Knight)) newPiece.attackSprites = enemyKnightAttackSprites;
-            else if (unitType == typeof(Archer)) newPiece.attackSprites = enemyArcherAttackSprites;
-            else newPiece.attackSprites = enemyMageAttackSprites;
+            if (unitType == typeof(Knight)) { newPiece.levelSprites = enemyKnightSprites; newPiece.attackSprites = enemyKnightAttackSprites; }
+            else if (unitType == typeof(Archer)) { newPiece.levelSprites = enemyArcherSprites; newPiece.attackSprites = enemyArcherAttackSprites; }
+            else if (unitType == typeof(Mage)) { newPiece.levelSprites = enemyMageSprites; newPiece.attackSprites = enemyMageAttackSprites; }
         }
 
         newPiece.Setup(isPlayer, teamColor, spriteColor, this);
 
-        // Убираем наложение цвета — спрайт уже цветной
+        
         Image img = newPiece.GetComponent<Image>();
-        if (img != null)
-            img.color = Color.white; // Белый = без перекрашивания
+        if (img != null) img.color = Color.white;
 
-        // ВАЖНО: привязываем к клетке
+        if (newPiece.level > 1)
+        {
+            newPiece.ApplyLevelStats();
+            newPiece.UpdateLevelAppearance();
+        }
+
         newPiece.Place(targetCell);
 
         if (isPlayer) mMyMinis.Add(newPiece);
         else mEnemyMinis.Add(newPiece);
+
         return newPiece;
     }
-
     private void CleanDeadUnits()
     {
         mMyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
@@ -682,20 +673,35 @@ public class PieceManager : MonoBehaviour
     public void SpawnEnemyLayout(string data)
     {
         ClearEnemies();
-        string[] values = data.Split(',');
+        
+        string[] units = data.Split(',');
 
-        for (int i = 0; i < values.Length; i++)
+        for (int i = 0; i < units.Length; i++)
         {
-            if (i >= 25) break;
-            int unitType = int.Parse(values[i]);
-            if (unitType == 0) continue;
+            if (i >= 25) break; // Сетка врага 5x5
+            
+            string[] parts = units[i].Split(':');
+            int unitTypeID = int.Parse(parts[0]);
+            
+            if (unitTypeID == 0) continue; // Пустая клетка
+
+            int unitLevel = (parts.Length > 1) ? int.Parse(parts[1]) : 1;
+            
             int x = i % 5;
-            int y = (i / 5) + 5;
-            Type t = GetTypeByID(unitType);
+            int y = (i / 5) + 5; // Вражеская половина (ряды 5-9)
+
+            Type t = GetTypeByID(unitTypeID);
             if (t == null) continue;
-            Color32 col = GetColorByUnitType(unitType);
-            if (mBoard.mAllCells[x, y].mCurrentPiece == null)
-                SpawnUnit(t, Color.black, col, new Vector2Int(x, y), false);
+
+            // Создаем юнита и сразу передаем ему уровень
+            BasePiece newEnemy = SpawnUnit(t, Color.black, GetColorByUnitType(unitTypeID), new Vector2Int(x, y), false);
+            
+            if (newEnemy != null)
+            {
+                newEnemy.level = unitLevel;
+                newEnemy.ApplyLevelStats();      // Применяем множители HP/Damage
+                newEnemy.UpdateLevelAppearance(); // Ставим нужный спрайт
+            }
         }
     }
 
@@ -829,5 +835,29 @@ public class PieceManager : MonoBehaviour
     public void ExitToMenu()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+    }
+
+    public float CalculateFitness() 
+    {
+        float enemyHP = mEnemyMinis.Sum(u => u.currentHP);
+        float playerHP = mMyMinis.Sum(u => u.currentHP);
+        return enemyHP - playerHP;
+    }
+    public int CalculateEnemyBudget()
+    {
+        
+        int baseBudget = 10 + (currentRound - 1) * 4; 
+        
+        
+        int survivorBonus = 0;
+        foreach (var unit in mEnemyMinis)
+        {
+            if (unit != null && unit.gameObject.activeSelf && unit.currentHP > 0)
+            {
+                survivorBonus += GetUnitCost(unit.GetType()) * unit.level;
+            }
+        }
+        
+        return baseBudget + survivorBonus;
     }
 }

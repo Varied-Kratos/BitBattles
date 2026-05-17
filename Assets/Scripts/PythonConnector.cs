@@ -27,43 +27,39 @@ public class PythonConnector : MonoBehaviour
 
     public void RequestNextLayout(float lastFitness = 0)
     {
-        // 1. Проверяем основы
         if (pieceManager == null || boardEncoder == null) return;
 
-        // 2. БЕЗОПАСНОЕ выключение панелей (если они null, ошибки не будет)
         try {
             if (pieceManager.victoryPanel != null) pieceManager.victoryPanel.SetActive(false);
             if (pieceManager.defeatPanel != null) pieceManager.defeatPanel.SetActive(false);
-        } catch { /* игнорируем, если что-то не так с UI */ }
+        } catch { }
 
         try 
         {
-            // Получаем состояние доски
+            int enemyBudget = pieceManager.CalculateEnemyBudget();
+            int playerTrophies = PlayerDataManager.instance != null ? PlayerDataManager.instance.trophies : 0;
+            int round = pieceManager.currentRound;
+
             float[] rawState = boardEncoder.GetFlattenedBoardState();
             if (rawState == null) return;
 
-            // Конвертируем в строку для сервера
             string boardState = string.Join(",", rawState.Select(f => ((int)f).ToString()));
-            string message = $"RESULT:{lastFitness}|{boardState}"; 
+            string message = $"FITNESS:{lastFitness.ToString("F1")}|BUDGET:{enemyBudget}|TROPHIES:{playerTrophies}|ROUND:{round}|BOARD:{boardState}"; 
 
             byte[] dataToSend = Encoding.UTF8.GetBytes(message);
 
             using (TcpClient client = new TcpClient())
             {
-                // Пытаемся подключиться (таймаут 1 сек)
                 var result = client.BeginConnect(host, port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
                 
-                if (!success) {
-                    Debug.LogWarning("Python Server не отвечает (таймаут)");
-                    return;
-                }
+                if (!success) return;
 
                 client.EndConnect(result);
                 using (NetworkStream stream = client.GetStream())
                 {
                     stream.Write(dataToSend, 0, dataToSend.Length);
-                    byte[] buffer = new byte[1024];
+                    byte[] buffer = new byte[2048];
                     int bytesRead = stream.Read(buffer, 0, buffer.Length);
                     string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
@@ -74,7 +70,7 @@ public class PythonConnector : MonoBehaviour
             }
         }
         catch (Exception e) {
-            Debug.LogWarning("[PythonConnector] Ошибка: " + e.Message);
+            Debug.LogWarning(e.Message);
         }
     }
 }
