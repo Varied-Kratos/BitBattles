@@ -176,27 +176,43 @@ public class PieceManager : MonoBehaviour
         StartTimer(); // ← ЗАПУСК ТАЙМЕРА
     }
 
-    public void SetupNextRound()
+    public void SetupNextRound(float fitness = 0)
     {
+        // 1. Полная очистка поля от старых юнитов
         ClearAllUnits();
+
+        // 2. Восстановление твоих (игрока) выживших юнитов
         RestorePlayerUnits();
-        if (pythonConnector != null) {
-            pythonConnector.RequestNextLayout(); 
-        } else {
+
+        // 3. Запрос новой расстановки у ИИ через Python
+        if (pythonConnector != null) 
+        {
+            // Передаем накопленный фитнес (результат боя) в коннектор
+            pythonConnector.RequestNextLayout(fitness); 
+        } 
+        else 
+        {
             Debug.LogError("Ссылка на PythonConnector не назначена в инспекторе!");
         }
 
+        // 4. Экономика: начисление бонуса эликсира за новый раунд
         int elixirBonus = 4;
         currentElixir += elixirBonus;
         UpdateElixirUI();
 
+        // 5. Сброс игровых состояний для подготовки к расстановке
         BasePiece.sBattleStarted = false;
         IsBattleActive = false;
         mBattleInProgress = false;
 
-        if (draftManager != null) draftManager.RefreshDraft();
+        // 6. Обновление магазина юнитов (драфта)
+        if (draftManager != null) 
+        {
+            draftManager.RefreshDraft();
+        }
 
-        StartTimer(); // ← ЗАПУСК ТАЙМЕРА
+        // 7. Запуск таймера фазы подготовки
+        StartTimer(); 
     }
 
     public void StartTimer()
@@ -493,7 +509,7 @@ public class PieceManager : MonoBehaviour
             playerWon = false;
             AudioManager.Instance?.PlayRoundLose();
         }
-
+        float currentFitness = CalculateFitness();
         UpdateScoreUI();
         mBattleInProgress = false;
         IsBattleActive = false;
@@ -510,7 +526,7 @@ public class PieceManager : MonoBehaviour
         // Переходим к следующему раунду
         currentRound++;
         UpdateScoreUI();
-        SetupNextRound();
+        SetupNextRound(currentFitness);
 
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayBattleMusic();
@@ -674,17 +690,22 @@ public class PieceManager : MonoBehaviour
     {
         ClearEnemies();
         
-        string[] units = data.Split(',');
+        // Убираем лишние пробелы и разбиваем по запятой
+        string[] units = data.Trim().Split(',');
 
         for (int i = 0; i < units.Length; i++)
         {
             if (i >= 25) break; // Сетка врага 5x5
             
+            if (string.IsNullOrEmpty(units[i])) continue;
+
             string[] parts = units[i].Split(':');
             int unitTypeID = int.Parse(parts[0]);
             
             if (unitTypeID == 0) continue; // Пустая клетка
 
+            // БЕЗОПАСНЫЙ ПАРСИНГ УРОВНЯ:
+            // Если Python прислал "1:2" -> уровень 2. Если просто "1" -> уровень 1.
             int unitLevel = (parts.Length > 1) ? int.Parse(parts[1]) : 1;
             
             int x = i % 5;
@@ -693,18 +714,17 @@ public class PieceManager : MonoBehaviour
             Type t = GetTypeByID(unitTypeID);
             if (t == null) continue;
 
-            // Создаем юнита и сразу передаем ему уровень
             BasePiece newEnemy = SpawnUnit(t, Color.black, GetColorByUnitType(unitTypeID), new Vector2Int(x, y), false);
             
             if (newEnemy != null)
             {
                 newEnemy.level = unitLevel;
-                newEnemy.ApplyLevelStats();      // Применяем множители HP/Damage
-                newEnemy.UpdateLevelAppearance(); // Ставим нужный спрайт
+                newEnemy.ApplyLevelStats();      
+                newEnemy.UpdateLevelAppearance(); 
+                newEnemy.RefreshHealthBar(); // Обновляем звёзды/полоску
             }
         }
     }
-
     public void ClearEnemies()
     {
         foreach (BasePiece unit in mEnemyMinis)
