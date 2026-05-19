@@ -22,28 +22,32 @@ public class PythonConnector : MonoBehaviour
     {
         if (pieceManager == null || boardEncoder == null) return;
 
-        // Чистим интерфейс перед новым запросом
         if (pieceManager.victoryPanel != null) pieceManager.victoryPanel.SetActive(false);
         if (pieceManager.defeatPanel != null) pieceManager.defeatPanel.SetActive(false);
 
         try 
         {
-            // Сбор данных
             int enemyBudget = pieceManager.CalculateEnemyBudget();
             int currentRound = pieceManager.currentRound;
             float[] rawBoard = boardEncoder.GetFlattenedBoardState();
             
             if (rawBoard == null) return;
 
-            // Сборка финального вектора 102
+            // Собираем fullState (100 клеток доски + 2 мета-переменные)
             float[] fullState = new float[102];
             Array.Copy(rawBoard, fullState, Math.Min(rawBoard.Length, 100));
             fullState[100] = (float)enemyBudget;
             fullState[101] = (float)currentRound;
 
-            // Кодирование в строку: "Бюджет|Число,Число,Число..."
+            // Переводим массив доски в строку через запятую
             string boardString = string.Join(",", fullState.Select(f => f.ToString(CultureInfo.InvariantCulture)));
-            string message = $"{enemyBudget}|{boardString}"; 
+            
+            // Форматируем фитнес, чтобы в Python гарантированно прилетела точка в качестве разделителя
+            string fitnessStr = lastFitness.ToString("F2", CultureInfo.InvariantCulture);
+
+            // Склеиваем ВСЁ в одно сообщение через разделитель '|'
+            // Формат: БЮДЖЕТ | ФИТНЕС | ДОСКА,МЕТА
+            string message = $"{enemyBudget}|{fitnessStr}|{boardString}"; 
 
             byte[] dataToSend = Encoding.UTF8.GetBytes(message);
 
@@ -52,15 +56,19 @@ public class PythonConnector : MonoBehaviour
                 var result = client.BeginConnect(host, port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
                 
-                if (!success) return;
+                if (!success) {
+                    Debug.LogError("Не удалось подключиться к Python-серверу по таймауту.");
+                    return;
+                }
                 client.EndConnect(result);
 
                 using (NetworkStream stream = client.GetStream())
                 {
-                    // Отправка данных (Input для нейросети)
+                    // 1. Отправляем ВСЕ данные разом
                     stream.Write(dataToSend, 0, dataToSend.Length);
+                    stream.Flush(); 
 
-                    // Получение ответа (Output нейросети - расстановка)
+                    // 2. Ждем ответ от Python с новой расстановкой врага
                     byte[] buffer = new byte[4096];
                     int bytesRead = stream.Read(buffer, 0, buffer.Length);
                     string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
@@ -68,12 +76,10 @@ public class PythonConnector : MonoBehaviour
                     if (!string.IsNullOrEmpty(response)) {
                         pieceManager.SpawnEnemyLayout(response);
                     }
-
-                    // Отправка результата (Fitness для обучения)
-                    string fitnessMsg = lastFitness.ToString("F2", CultureInfo.InvariantCulture);
-                    byte[] fitnessData = Encoding.UTF8.GetBytes(fitnessMsg);
-                    stream.Write(fitnessData, 0, fitnessData.Length);
-                }
+                    else {
+                        Debug.LogWarning("Получен пустой ответ от Python-сервера.");
+                    }
+                } // Стрим и соединение закроются автоматически и чисто
             }
         }
         catch (Exception e) {

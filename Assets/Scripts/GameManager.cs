@@ -23,7 +23,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // Запуск боя по нажатию пробела (для теста)
+        // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ)
         if (Input.GetKeyDown(KeyCode.Space))
         {
             mPieceManager.StartBattle();
