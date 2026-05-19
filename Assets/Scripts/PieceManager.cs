@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 [System.Serializable]
 public struct UnitSpawnCommand
@@ -31,6 +32,13 @@ public class PieceManager : MonoBehaviour
     public Sprite knightShopSprite;
     public Sprite archerShopSprite;
     public Sprite mageShopSprite;
+
+    [Header("Obstacles & Heals")]
+    public GameObject stonePrefab;
+    public GameObject healPrefab;
+    public HashSet<Vector2Int> blockedCells = new HashSet<Vector2Int>();
+    public HashSet<Vector2Int> healCells = new HashSet<Vector2Int>();
+    public List<GameObject> spawnedObjects = new List<GameObject>();
 
     [Header("Battle Settings")]
     public float turnDelay = 1.0f;
@@ -108,6 +116,63 @@ public class PieceManager : MonoBehaviour
         Destroy(projectile);
     }
 
+    private void SpawnObstaclesAndHeals(int round)
+    {
+        ClearObstaclesAndHeals();
+
+        int maxCount = Mathf.Min(round, 3);
+        int stoneCount = Random.Range(0, maxCount + 1);
+        int healCount = Random.Range(0, maxCount + 1);
+
+        // Соберём все свободные клетки (без юнитов, не заблокированные)
+        List<Vector2Int> freeCells = new List<Vector2Int>();
+        for (int x = 0; x < 5; x++)
+        {
+            for (int y = 0; y < 10; y++)
+            {
+                if (mBoard.mAllCells[x, y].mCurrentPiece == null)
+                    freeCells.Add(new Vector2Int(x, y));
+            }
+        }
+
+        // Камни
+        for (int i = 0; i < stoneCount; i++)
+        {
+            if (freeCells.Count == 0) break;
+            int idx = Random.Range(0, freeCells.Count);
+            Vector2Int pos = freeCells[idx];
+            freeCells.RemoveAt(idx);
+
+            blockedCells.Add(pos);
+            GameObject stone = Instantiate(stonePrefab, mBoard.mAllCells[pos.x, pos.y].transform);
+            stone.transform.localPosition = Vector3.zero;
+            spawnedObjects.Add(stone);
+        }
+
+        // Хилки
+        for (int i = 0; i < healCount; i++)
+        {
+            if (freeCells.Count == 0) break;
+            int idx = Random.Range(0, freeCells.Count);
+            Vector2Int pos = freeCells[idx];
+            freeCells.RemoveAt(idx);
+
+            healCells.Add(pos);
+            GameObject heal = Instantiate(healPrefab, mBoard.mAllCells[pos.x, pos.y].transform);
+            heal.transform.localPosition = Vector3.zero;
+            spawnedObjects.Add(heal);
+        }
+    }
+
+    private void ClearObstaclesAndHeals()
+    {
+        foreach (var obj in spawnedObjects)
+            if (obj != null) Destroy(obj);
+        spawnedObjects.Clear();
+        blockedCells.Clear();
+        healCells.Clear();
+    }
+
     [Header("Enemy Level Sprites")]
     public Sprite[] enemyKnightSprites;
     public Sprite[] enemyArcherSprites;
@@ -167,6 +232,7 @@ public class PieceManager : MonoBehaviour
 
         currentElixir = maxElixir;
         UpdateElixirUI();
+        SpawnObstaclesAndHeals(currentRound);
         BasePiece.sBattleStarted = false;
         IsBattleActive = false;
         mBattleInProgress = false;
@@ -204,7 +270,7 @@ public class PieceManager : MonoBehaviour
         BasePiece.sBattleStarted = false;
         IsBattleActive = false;
         mBattleInProgress = false;
-
+        SpawnObstaclesAndHeals(currentRound);
         // 6. Обновление магазина юнитов (драфта)
         if (draftManager != null) 
         {
@@ -344,6 +410,7 @@ public class PieceManager : MonoBehaviour
                 for (int y = 0; y < 10; y++)
                     if (mBoard.mAllCells[x, y] != null)
                         mBoard.mAllCells[x, y].mCurrentPiece = null;
+        ClearObstaclesAndHeals();
     }
 
     public bool CanAfford(int cost) => currentElixir >= cost;

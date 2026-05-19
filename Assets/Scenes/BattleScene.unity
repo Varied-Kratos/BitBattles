@@ -853,6 +853,9 @@ MonoBehaviour:
   knightShopSprite: {fileID: -479032526195965043, guid: ac30486e5dcfb60488b0c3c3e4fe8eb0, type: 3}
   archerShopSprite: {fileID: 6935367852101090579, guid: 8000b6d855ca81846ab85f143f341a2f, type: 3}
   mageShopSprite: {fileID: 3627933015207772140, guid: 7c04195a34347a542af972b410777501, type: 3}
+  stonePrefab: {fileID: 7096432273562978680, guid: b5ab7b09ae5cc934aa90844d678a105a, type: 3}
+  healPrefab: {fileID: 4016920980720187878, guid: 1f6c106ca975e2b448a2ac430f691cbb, type: 3}
+  spawnedObjects: []
   turnDelay: 0.5
   maxElixir: 10
   currentElixir: 10

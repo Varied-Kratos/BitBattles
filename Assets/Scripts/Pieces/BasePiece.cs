@@ -381,6 +381,23 @@ public abstract class BasePiece : EventTrigger
         mCurrentCell = targetCell;
         mCurrentCell.mCurrentPiece = this;
         transform.position = mCurrentCell.transform.position;
+
+        PieceManager pm = mPieceManager;
+        if (pm != null && pm.healCells.Contains(mCurrentCell.mBoardPosition))
+        {
+            // Лечим, например, 50% HP
+            currentHP = Mathf.Min(maxHP, currentHP + maxHP / 2);
+            pm.healCells.Remove(mCurrentCell.mBoardPosition);
+            // Удалить спрайт хилки – можно найти дочерний объект heal на клетке и уничтожить
+            foreach (Transform child in mCurrentCell.transform)
+            {
+                if (child.name.StartsWith("Heal")) // как-то пометить префаб
+                {
+                    Destroy(child.gameObject);
+                    break;
+                }
+            }
+        }
     }
     private void ResetToLevelSprite()
     {

@@ -10,7 +10,8 @@ public enum CellState
     Enemy,
     Free,
     OutOfBounds,
-    InvalidTeamSide
+    InvalidTeamSide,
+    Blocked   // ← новое
 }
 
 public class Board : MonoBehaviour
@@ -68,34 +69,20 @@ public class Board : MonoBehaviour
         }
         #endregion
     }
-
-    void Start()
-    {
-        if (mFullBackground != null)
-        {
-            RectTransform bgRect = mFullBackground.GetComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(500, 1000);
-            bgRect.anchoredPosition = new Vector2(250, 500); // Центр поля
-        }
-    }
-
     public CellState ValidateCell(int targetX, int targetY, BasePiece checkingPiece)
     {
-        // Проверка границ
         if (targetX < 0 || targetX >= 5 || targetY < 0 || targetY >= 10)
             return CellState.OutOfBounds;
 
-        // Защита от null
         if (checkingPiece == null)
             return CellState.Free;
 
-        // УДАЛИ ИЛИ ЗАКОММЕНТИРУЙ ЭТИ СТРОКИ:
-        // if (checkingPiece.mColor == Color.white && targetY >= 5)
-        //     return CellState.InvalidTeamSide;
-        // if (checkingPiece.mColor == Color.black && targetY < 5)
-        //     return CellState.InvalidTeamSide;
-
         Cell targetCell = mAllCells[targetX, targetY];
+
+        // Проверка на камень
+        PieceManager pm = FindFirstObjectByType<PieceManager>();     
+        if (pm != null && pm.blockedCells.Contains(new Vector2Int(targetX, targetY)))
+            return CellState.Blocked;
 
         if (targetCell.mCurrentPiece != null)
         {
@@ -105,6 +92,15 @@ public class Board : MonoBehaviour
         }
 
         return CellState.Free;
+    }
+    void Start()
+    {
+        if (mFullBackground != null)
+        {
+            RectTransform bgRect = mFullBackground.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(500, 1000);
+            bgRect.anchoredPosition = new Vector2(250, 500); // Центр поля
+        }
     }
 }
 
