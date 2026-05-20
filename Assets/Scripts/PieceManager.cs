@@ -529,16 +529,26 @@ public class PieceManager : MonoBehaviour
             foreach (BasePiece unit in allUnits)
             {
                 if (unit == null || !unit.gameObject.activeSelf) continue;
-                BasePiece enemy = unit.FindNearestEnemy();
-                if (enemy == null || !enemy.gameObject.activeSelf) continue;
 
-                if (unit.CanAttackTarget(enemy))
-                    attacks[unit] = enemy;
+                if (RLManager.Instance != null && RLManager.Instance.useRL)
+                {
+                    // RL сам решает: двигаться или атаковать
+                    RLManager.Instance.RLTurn(unit);
+                }
                 else
                 {
-                    Cell nextCell = unit.GetCellTowardsTarget(enemy);
-                    if (nextCell != null && nextCell.mCurrentPiece == null)
-                        desiredMoves[unit] = nextCell;
+                    // Старое поведение
+                    BasePiece enemy = unit.FindNearestEnemy();
+                    if (enemy == null || !enemy.gameObject.activeSelf) continue;
+
+                    if (unit.CanAttackTarget(enemy))
+                        attacks[unit] = enemy;
+                    else
+                    {
+                        Cell nextCell = unit.GetCellTowardsTarget(enemy);
+                        if (nextCell != null && nextCell.mCurrentPiece == null)
+                            desiredMoves[unit] = nextCell;
+                    }
                 }
             }
 
@@ -745,7 +755,7 @@ public class PieceManager : MonoBehaviour
         mEnemyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
     }
 
-    private List<BasePiece> GetAliveUnits()
+    public List<BasePiece> GetAliveUnits()
     {
         List<BasePiece> all = new List<BasePiece>();
         all.AddRange(mMyMinis.Where(u => u != null && u.gameObject.activeSelf));
