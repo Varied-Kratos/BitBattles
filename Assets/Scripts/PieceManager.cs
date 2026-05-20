@@ -512,7 +512,7 @@ public class PieceManager : MonoBehaviour
         StartCoroutine(BattleLoop());
     }
 
-    private IEnumerator BattleLoop()
+   private IEnumerator BattleLoop()
     {
         int maxRounds = 50;
         int roundCount = 0;
@@ -523,7 +523,10 @@ public class PieceManager : MonoBehaviour
             CleanDeadUnits();
             List<BasePiece> allUnits = GetAliveUnits();
 
+            // Будем хранить не сам объект врага (который может умереть), 
+            // а позицию, куда должна прилететь стрела/магия в случае смерти
             Dictionary<BasePiece, BasePiece> attacks = new Dictionary<BasePiece, BasePiece>();
+            Dictionary<BasePiece, Vector3> deathTargetPositions = new Dictionary<BasePiece, Vector3>();
             Dictionary<BasePiece, Cell> desiredMoves = new Dictionary<BasePiece, Cell>();
 
             foreach (BasePiece unit in allUnits)
@@ -532,8 +535,26 @@ public class PieceManager : MonoBehaviour
 
                 if (RLManager.Instance != null && RLManager.Instance.useRL)
                 {
-                    // RL сам решает: двигаться или атаковать
+                    BasePiece targetEnemy = unit.FindNearestEnemy();
+                    float enemyHPBefore = (targetEnemy != null) ? targetEnemy.currentHP : 0f;
+                    Vector3 lastEnemyPos = (targetEnemy != null) ? targetEnemy.transform.position : Vector3.zero;
+
+                    // Ход ИИ (урон наносится тут же внутри)
                     RLManager.Instance.RLTurn(unit);
+
+                    // Если урон прошел
+                    if (targetEnemy != null && targetEnemy.currentHP < enemyHPBefore)
+                    {
+                        if (targetEnemy.gameObject.activeSelf && targetEnemy.currentHP > 0)
+                        {
+                            attacks[unit] = targetEnemy;
+                        }
+                        else
+                        {
+                            // Враг погиб от этого удара — запоминаем его координаты, чтобы стрела не выдала ошибку
+                            deathTargetPositions[unit] = lastEnemyPos;
+                        }
+                    }
                 }
                 else
                 {
@@ -552,20 +573,39 @@ public class PieceManager : MonoBehaviour
                 }
             }
 
+            // Отработка перемещений для ручного режима
             foreach (var kvp in desiredMoves)
                 if (kvp.Key != null && kvp.Key.gameObject.activeSelf && kvp.Value.mCurrentPiece == null)
                     kvp.Key.MoveToCell(kvp.Value);
 
             yield return new WaitForSeconds(0.2f);
 
+            // 1. Визуализируем атаки по живым целям
             foreach (var kvp in attacks)
             {
                 if (kvp.Key != null && kvp.Key.gameObject.activeSelf &&
-                    kvp.Value != null && kvp.Value.gameObject.activeSelf &&
-                    kvp.Key.CanAttackTarget(kvp.Value))
+                    kvp.Value != null && kvp.Value.gameObject.activeSelf)
                 {
                     PlayAttackEffect(kvp.Key, kvp.Value);
-                    kvp.Key.AttackTarget(kvp.Value);
+                    
+                    if (RLManager.Instance == null || !RLManager.Instance.useRL)
+                    {
+                        kvp.Key.AttackTarget(kvp.Value);
+                    }
+                }
+            }
+
+            // 2. Визуализируем фатальные атаки (для RL, если врага испарило мгновенным уроном)
+            foreach (var kvp in deathTargetPositions)
+            {
+                if (kvp.Key != null && kvp.Key.gameObject.activeSelf)
+                {
+                    // Спавним временную пустышку на месте гибели, чтобы FlyProjectile не упал с ошибкой
+                    GameObject dummyTarget = new GameObject("DummyTarget");
+                    dummyTarget.transform.position = kvp.Value;
+                    
+                    PlayAttackEffect(kvp.Key, dummyTarget.AddComponent<Knight>()); // Тип не важен, нужен лишь transform
+                    Destroy(dummyTarget, 0.4f); // Удаляем пустышку после долета снаряда
                 }
             }
 
@@ -591,7 +631,6 @@ public class PieceManager : MonoBehaviour
         mBattleInProgress = false;
         IsBattleActive = false;
 
-        // Показываем плашку (она ждёт 2 секунды)
         yield return ShowRoundResult(playerWon);
 
         if (playerWins >= winsToWin || enemyWins >= winsToWin)
@@ -600,7 +639,6 @@ public class PieceManager : MonoBehaviour
             yield break;
         }
 
-        // Переходим к следующему раунду
         currentRound++;
         UpdateScoreUI();
         SetupNextRound(currentFitness);
@@ -936,9 +974,33 @@ public class PieceManager : MonoBehaviour
 
     public float CalculateFitness() 
     {
-        float enemyHP = mEnemyMinis.Sum(u => u.currentHP);
-        float playerHP = mMyMinis.Sum(u => u.currentHP);
-        return enemyHP - playerHP;
+        // 1. Считаем ТЕКУЩЕЕ живое HP сторон
+        float currentEnemyHP = mEnemyMinis.Sum(u => u.currentHP);
+        float currentPlayerHP = mMyMinis.Sum(u => u.currentHP);
+
+        // 2. Считаем МАКСИМАЛЬНОЕ (стартовое) HP заспавненных армий
+        // Заменяем 'maxHP' на то имя поля, которое у тебя отвечает за максимальное здоровье юнита
+        float maxEnemyHP = mEnemyMinis.Sum(u => u.maxHP); 
+        float maxPlayerHP = mMyMinis.Sum(u => u.maxHP);
+
+        // Защита от деления на ноль
+        if (maxEnemyHP <= 0) maxEnemyHP = 1;
+        if (maxPlayerHP <= 0) maxPlayerHP = 1;
+
+        // 3. Переводим в относительные проценты (от 0.0 до 1.0)
+        float enemyRatio = currentEnemyHP / maxEnemyHP;
+        float playerRatio = currentPlayerHP / maxPlayerHP;
+
+        // Базовый фитнес теперь строго в диапазоне от -1.0 до +1.0
+        float baseFitness = enemyRatio - playerRatio;
+
+        // 4. Добавляем жирный бонус за полный разгром игрока (Wipeout)
+        if (currentPlayerHP <= 0 && currentEnemyHP > 0)
+        {
+            baseFitness += 3.0f; 
+        }
+
+        return baseFitness;
     }
     public int CalculateEnemyBudget()
     {

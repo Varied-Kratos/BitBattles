@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Net.Sockets;
 using System.Text;
 using System.Linq;
@@ -18,7 +19,36 @@ public class PythonConnector : MonoBehaviour
         if (pieceManager == null) pieceManager = FindObjectOfType<PieceManager>();
     }
 
-    public void RequestNextLayout(float lastFitness = 0)
+    /// <summary>
+    /// Главный метод для запуска обсчета всего поколения.
+    /// Передай сюда массив фитнес-очков (размером 15), и они отправятся последовательно с микро-паузой.
+    /// </summary>
+    public void RequestWholePopulation(float[] fitnessScores)
+    {
+        if (fitnessScores == null || fitnessScores.Length == 0)
+        {
+            Debug.LogError("Массив фитнеса пуст или равен null!");
+            return;
+        }
+
+        StartCoroutine(SendPopulationCoroutine(fitnessScores));
+    }
+
+    private IEnumerator SendPopulationCoroutine(float[] fitnessScores)
+    {
+        for (int i = 0; i < fitnessScores.Length; i++)
+        {
+            // Вызываем отправку для текущего бота
+            ExecuteSingleRequest(fitnessScores[i], i);
+
+            // КРИТИЧЕСКИ ВАЖНО: Ждем 0.05 секунды перед следующим ботом,
+            // чтобы Python успевал вызывать .accept() и сокеты не отваливались
+            yield return new WaitForSeconds(0.05f);
+        }
+    }
+
+    // Внутренний метод, который выполняет один конкретный сетевой запрос
+    private void ExecuteSingleRequest(float lastFitness, int botIndex)
     {
         if (pieceManager == null || boardEncoder == null) return;
 
@@ -42,48 +72,57 @@ public class PythonConnector : MonoBehaviour
             // Переводим массив доски в строку через запятую
             string boardString = string.Join(",", fullState.Select(f => f.ToString(CultureInfo.InvariantCulture)));
             
-            // Форматируем фитнес, чтобы в Python гарантированно прилетела точка в качестве разделителя
+            // Форматируем фитнес с точкой-разделителем
             string fitnessStr = lastFitness.ToString("F2", CultureInfo.InvariantCulture);
 
-            // Склеиваем ВСЁ в одно сообщение через разделитель '|'
-            // Формат: БЮДЖЕТ | ФИТНЕС | ДОСКА,МЕТА
-            string message = $"{enemyBudget}|{fitnessStr}|{boardString}"; 
+            // ИСПРАВЛЕНО: Склеиваем и ДОБАВЛЯЕМ '\n' в самый конец, чтобы Python-сервер четко видел терминатор пакета
+            string message = $"{enemyBudget}|{fitnessStr}|{boardString}\n"; 
 
             byte[] dataToSend = Encoding.UTF8.GetBytes(message);
 
             using (TcpClient client = new TcpClient())
             {
                 var result = client.BeginConnect(host, port, null, null);
-                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                // ИСПРАВЛЕНО: Увеличили таймаут до 3 секунд, чтобы боты в очереди ОС не отваливались раньше времени
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(3));
                 
                 if (!success) {
-                    Debug.LogError("Не удалось подключиться к Python-серверу по таймауту.");
+                    Debug.LogError($"Бот {botIndex + 1}: Не удалось подключиться к Python-серверу по таймауту.");
                     return;
                 }
                 client.EndConnect(result);
 
                 using (NetworkStream stream = client.GetStream())
                 {
-                    // 1. Отправляем ВСЕ данные разом
+                    stream.ReadTimeout = 3000; // Таймаут на чтение ответа
+
+                    // 1. Отправляем данные
                     stream.Write(dataToSend, 0, dataToSend.Length);
                     stream.Flush(); 
 
-                    // 2. Ждем ответ от Python с новой расстановкой врага
+                    // 2. Ждем ответ от Python
                     byte[] buffer = new byte[4096];
                     int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                    string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    string response = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
 
                     if (!string.IsNullOrEmpty(response)) {
+                        // Передаем ответ в менеджер для спавна конкретного бота
                         pieceManager.SpawnEnemyLayout(response);
                     }
                     else {
-                        Debug.LogWarning("Получен пустой ответ от Python-сервера.");
+                        Debug.LogWarning($"Бот {botIndex + 1}: Получен пустой ответ от Python-сервера.");
                     }
-                } // Стрим и соединение закроются автоматически и чисто
+                } 
             }
         }
         catch (Exception e) {
-            Debug.LogWarning("Связь с Python не удалась: " + e.Message);
+            Debug.LogWarning($"Бот {botIndex + 1}: Связь с Python не удалась: " + e.Message);
         }
+    }
+
+    // Оставляем старый метод как обертку для одиночных тестов, если они где-то вызываются
+    public void RequestNextLayout(float lastFitness = 0)
+    {
+        ExecuteSingleRequest(lastFitness, 0);
     }
 }

@@ -67,7 +67,7 @@ public class RLManager : MonoBehaviour
     }
 
     // --------------------------------------------------
-    // 27-мерное состояние юнита (совместимо с STATE_SIZE=27)
+    // Вектор состояния (Строго 27 элементов для нейросети)
     // --------------------------------------------------
     public float[] GetUnitState(BasePiece unit)
     {
@@ -77,20 +77,20 @@ public class RLManager : MonoBehaviour
 
         Vector2Int pos = unit.mCurrentCell.mBoardPosition;
 
-        // 0-1: координаты
+        // 0-1: Свои координаты (нормализованные)
         s[0] = pos.x / 4f;
         s[1] = pos.y / 9f;
 
-        // 2: HP
+        // 2: Текущее HP (0.0 - 1.0)
         s[2] = (float)unit.currentHP / unit.maxHP;
 
-        // 3: уровень
+        // 3: Уровень юнита
         s[3] = unit.level / 3f;
 
-        // 4: тип юнита
+        // 4: ID Типа юнита
         s[4] = unit.unitID / 3f;
 
-        // 5-8: ближайший враг
+        // 5-8: Данные о ближайшем противнике
         BasePiece enemy = unit.FindNearestEnemy();
         if (enemy != null && enemy.mCurrentCell != null)
         {
@@ -100,55 +100,70 @@ public class RLManager : MonoBehaviour
             s[8] = unit.CanAttackTarget(enemy) ? 1f : 0f;
         }
 
-        // 9-16: 8 ближних соседей (радиус 1)
-        FillNeighbors(s, 9, pos, 1, unit);               // было FillNeighbors(s, 9, pos, 1);
-        FillNeighbors(s, 17, pos, unit.attackRange, unit); // было FillNeighbors(s, 17, pos, unit.attackRange);
-        // 17-25: дальние клетки (attackRange)
+        // 9-16: Окружение в радиусе 1 (ровно 8 ячеек вокруг)
+        FillRingNeighbors(s, 9, pos, 1, unit);
 
-        // 26: флаг укрытия за камнем (только для Archer/Mage)
+        // 17-25: Окружение на векторе атаки (9 фиксированных точек сканирования)
+        // Для ближников берем шаг 2, для дальников — их реальный attackRange
+        int range = (unit.attackRange <= 1) ? 2 : unit.attackRange;
+        FillRingNeighbors(s, 17, pos, range, unit);
+
+        // 26: Флаг нахождения за препятствием (укрытие)
         s[26] = IsBehindCover(unit) ? 1f : 0f;
 
         return s;
     }
 
-    // Заполняет массив s начиная с индекса start значениями клеток в радиусе radius
-    private void FillNeighbors(float[] arr, int start, Vector2Int pos, int radius, BasePiece unit)
+    // Заполняет ровно 8 слотов в массиве, сканируя окружение по направлениям компаса
+    private void FillRingNeighbors(float[] arr, int start, Vector2Int pos, int radius, BasePiece unit)
     {
         int idx = start;
-        for (int dy = -radius; dy <= radius; dy++)
-        {
-            for (int dx = -radius; dx <= radius; dx++)
-            {
-                if (dx == 0 && dy == 0) continue;
-                if (Mathf.Abs(dx) <= 1 && Mathf.Abs(dy) <= 1 && radius > 1) continue;
 
-                int nx = pos.x + dx;
-                int ny = pos.y + dy;
-                if (idx >= arr.Length) return;
+        // Жестко заданный порядок обхода 8 направлений, гарантирующий константный размер подмассива
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0) continue; 
+                if (idx >= arr.Length || idx >= start + 8) return; 
+
+                // Масштабируем шаг сканирования на величину радиуса
+                int nx = pos.x + (dx * radius);
+                int ny = pos.y + (dy * radius);
 
                 if (nx < 0 || nx >= 5 || ny < 0 || ny >= 10)
-                    arr[idx++] = -1f;
+                {
+                    arr[idx++] = -1f; // Край карты / Стена
+                }
                 else
                 {
-                    Cell cell = board.mAllCells[nx, ny];
                     if (pieceManager.blockedCells.Contains(new Vector2Int(nx, ny)))
-                        arr[idx++] = -2f;
+                    {
+                        arr[idx++] = -2f; // Препятствие (Камень)
+                    }
                     else if (pieceManager.healCells.Contains(new Vector2Int(nx, ny)))
-                        arr[idx++] = 3f;
-                    else if (cell == null || cell.mCurrentPiece == null)
-                        arr[idx++] = 0f;
+                    {
+                        arr[idx++] = 3f; // Руна лечения
+                    }
                     else
                     {
-                        BasePiece other = cell.mCurrentPiece;
-                        bool sameTeam = unit.name.Contains("Player") == other.name.Contains("Player");
-                        arr[idx++] = sameTeam ? 1f : 2f;
+                        Cell cell = board.mAllCells[nx, ny];
+                        if (cell == null || cell.mCurrentPiece == null)
+                        {
+                            arr[idx++] = 0f; // Пустая клетка
+                        }
+                        else
+                        {
+                            BasePiece other = cell.mCurrentPiece;
+                            bool sameTeam = unit.name.Contains("Player") == other.name.Contains("Player");
+                            arr[idx++] = sameTeam ? 1f : 2f; // 1 - союзник, 2 - враг
+                        }
                     }
                 }
             }
         }
     }
 
-    // Находится ли юнит за камнем относительно ближайшего врага
     private bool IsBehindCover(BasePiece unit)
     {
         if (unit == null || unit.mCurrentCell == null) return false;
@@ -163,15 +178,13 @@ public class RLManager : MonoBehaviour
         int dx = Mathf.Clamp(dir.x, -1, 1);
         int dy = Mathf.Clamp(dir.y, -1, 1);
         Vector2Int checkPos = myPos - new Vector2Int(dx, dy);
+        
         if (checkPos.x < 0 || checkPos.x >= 5 || checkPos.y < 0 || checkPos.y >= 10)
             return false;
 
         return pieceManager.blockedCells.Contains(checkPos);
     }
 
-    // --------------------------------------------------
-    // Отправка состояния и получение действия
-    // --------------------------------------------------
     private int SendStateAndGetAction(float[] state, float reward, bool done, string unitId)
     {
         if (!mConnected) return UnityEngine.Random.Range(0, 5);
@@ -191,6 +204,7 @@ public class RLManager : MonoBehaviour
             byte[] buffer = new byte[1024];
             int bytesRead = mStream.Read(buffer, 0, buffer.Length);
             string response = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
+            
             int action = 0;
             if (response.Contains("\"action\":"))
             {
@@ -210,9 +224,6 @@ public class RLManager : MonoBehaviour
         }
     }
 
-    // --------------------------------------------------
-    // Применение действия
-    // --------------------------------------------------
     public void ApplyAction(BasePiece unit, int action)
     {
         if (unit == null || unit.mCurrentCell == null) return;
@@ -222,11 +233,11 @@ public class RLManager : MonoBehaviour
 
         switch (action)
         {
-            case 1: newPos = pos + new Vector2Int(0, 1); break;
-            case 2: newPos = pos + new Vector2Int(0, -1); break;
-            case 3: newPos = pos + new Vector2Int(-1, 0); break;
-            case 4: newPos = pos + new Vector2Int(1, 0); break;
-            default: break;
+            case 1: newPos = pos + new Vector2Int(0, 1); break;   // Вверх
+            case 2: newPos = pos + new Vector2Int(0, -1); break;  // Вниз
+            case 3: newPos = pos + new Vector2Int(-1, 0); break;  // Влево
+            case 4: newPos = pos + new Vector2Int(1, 0); break;   // Вправо
+            default: break;                                       // 0 - Пропуск хода
         }
 
         if (action >= 1 && action <= 4)
@@ -238,7 +249,7 @@ public class RLManager : MonoBehaviour
             }
         }
 
-        // Авто-атака (если враг рядом)
+        // Выполнение атаки после фазы движения
         BasePiece enemy = unit.FindNearestEnemy();
         if (enemy != null && enemy != unit && unit.CanAttackTarget(enemy))
         {
@@ -254,7 +265,7 @@ public class RLManager : MonoBehaviour
     }
 
     // --------------------------------------------------
-    // RL-ход с расчётом награды
+    // Выполнение шага агента с расчетом награды
     // --------------------------------------------------
     public void RLTurn(BasePiece unit)
     {
@@ -263,57 +274,68 @@ public class RLManager : MonoBehaviour
         string id = unit.name;
         float reward = 0f;
         bool done = false;
-        float hpBefore = unit.currentHP;
-        float distBefore = DistanceToNearestEnemy(unit);
 
-        // Награда за предыдущий шаг
+        float currentHP = unit.currentHP;
+        float currentDist = DistanceToNearestEnemy(unit);
+
+        // Расчет награды строго на основании дельты с ПРЕДЫДУЩЕГО шага
         if (prevHP.ContainsKey(id))
         {
-            float hpDiff = unit.currentHP - prevHP[id];
-            reward += hpDiff * 0.1f;
+            // 1. ШТРАФ ЗА ВРЕМЯ (каждый шаг стоит немного "энергии", чтобы агент не топтался на месте)
+            reward -= 0.02f; 
 
+            // 2. Изменение здоровья
+            float hpDiff = currentHP - prevHP[id];
+            reward += hpDiff * 0.1f; // Урон = минус, хилка = плюс
+
+            // 3. Убийство врага
             if (killedEnemy.ContainsKey(id) && killedEnemy[id])
             {
-                reward += 5f;
+                reward += 5f; 
                 killedEnemy[id] = false;
             }
 
-            float newDist = DistanceToNearestEnemy(unit);
-            float distDiff = prevDist[id] - newDist;
-            reward += distDiff * 0.01f;
+            // 4. Приближение к цели
+            float distDiff = prevDist[id] - currentDist;
+            reward += distDiff * 0.01f; 
 
-            // Бонус за укрытие
+            // 5. Бонус за укрытие (для Archer/Mage)
             if ((unit is Archer || unit is Mage) && IsBehindCover(unit))
                 reward += 0.5f;
 
-            // Подбор хилки (HP выросло без атаки)
-            if (unit.currentHP > hpBefore && !unit.CanAttackTarget(unit.FindNearestEnemy()))
+            // 6. Подбор руны лечения (если здоровье выросло само, без атаки)
+            if (hpDiff > 0 && !unit.CanAttackTarget(unit.FindNearestEnemy()))
                 reward += 3f;
 
-            if (unit.currentHP <= 0)
+            // 7. Смерть юнита
+            if (currentHP <= 0)
             {
-                reward -= 10f;
+                reward -= 10f; 
                 done = true;
             }
         }
 
+        // Запрос действия у Python модели
         float[] state = GetUnitState(unit);
         int action = SendStateAndGetAction(state, reward, done, id);
+        
+        // Применение экшена в симуляции Unity
         ApplyAction(unit, action);
 
-        // Сохраняем данные для следующего шага
-        prevHP[id] = unit.currentHP;
-        prevDist[id] = DistanceToNearestEnemy(unit);
-        if (!killedEnemy.ContainsKey(id)) killedEnemy[id] = false;
-
-        if (done)
+        // Обновление истории шагов строго ПОСЛЕ изменения состояния среды
+        if (!done)
+        {
+            prevHP[id] = unit.currentHP;
+            prevDist[id] = DistanceToNearestEnemy(unit);
+            if (!killedEnemy.ContainsKey(id)) killedEnemy[id] = false;
+        }
+        else
         {
             prevHP.Remove(id);
             prevDist.Remove(id);
             killedEnemy.Remove(id);
         }
     }
-
     private float DistanceToNearestEnemy(BasePiece unit)
     {
         BasePiece enemy = unit.FindNearestEnemy();
