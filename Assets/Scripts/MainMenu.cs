@@ -35,6 +35,24 @@ public class MainMenu : MonoBehaviour
         if (profilePanel != null)
             profilePanel.SetActive(false);
     }
+    public void PlayGame()
+    {
+        string playerName = PlayerDataManager.instance?.playerName ?? "Player";
+        string key = "TutorialSeen_" + playerName;
+
+        AudioManager.Instance?.PlayButton();
+
+        if (!PlayerPrefs.HasKey(key))
+        {
+            // Первый раз — туториал
+            SceneManager.LoadScene("TutorialScene");
+        }
+        else
+        {
+            // Сразу в бой
+            SceneManager.LoadScene("BattleScene");
+        }
+    }
 
     public void ToggleSettings()
     {
@@ -102,11 +120,6 @@ public class MainMenu : MonoBehaviour
         }
     }
 
-    public void PlayGame()
-    {
-        AudioManager.Instance.PlayButton();
-        SceneManager.LoadScene("BattleScene");
-    }
 
     public void QuitGame()
     {

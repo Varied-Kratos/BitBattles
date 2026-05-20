@@ -74,4 +74,15 @@ public class PlayerDataManager : MonoBehaviour
         SaveData();
         Debug.Log($"Данные обновлены. Кубки: {trophies}, Победы: {wins}, Поражения: {losses}");
     }
+    // В любом месте, где инициализируется профиль:
+    public bool HasSeenTutorial()
+    {
+        return PlayerPrefs.GetInt("TutorialSeen_" + PlayerDataManager.instance.playerName, 0) == 1;
+    }
+
+    public void MarkTutorialSeen()
+    {
+        PlayerPrefs.SetInt("TutorialSeen_" + PlayerDataManager.instance.playerName, 1);
+        PlayerPrefs.Save();
+    }
 }
