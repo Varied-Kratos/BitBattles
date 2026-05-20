@@ -34,6 +34,7 @@ class RLAgent:
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.995
         self.batch_size = 32
+        self.step_count = 0
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = DQN(state_size, action_size).to(self.device)
@@ -75,6 +76,14 @@ class RLAgent:
         self.optimizer.step()
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+        # Логирование и сохранение
+        self.step_count += 1
+        if self.step_count % 100 == 0:
+            print(f"Шаг {self.step_count}, ε={self.epsilon:.3f}, память={len(self.memory)}")
+        if self.step_count % 50 == 0:
+            self.save()
+            print(f"Модель сохранена (шаг {self.step_count})")
 
     def save(self, path="rl_model.pth"):
         torch.save(self.model.state_dict(), path)
@@ -152,6 +161,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 # Периодически сохраняем модель
                 if random.random() < 0.01:
                     agent.save()
+                    print(f"Модель сохранена (ε={agent.epsilon:.3f})")
             except Exception as e:
                 print("Ошибка:", e)
 
