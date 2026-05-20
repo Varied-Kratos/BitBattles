@@ -6,7 +6,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
-
+using System.IO;
 [System.Serializable]
 public struct UnitSpawnCommand
 {
@@ -78,6 +78,9 @@ public class PieceManager : MonoBehaviour
     public GameObject magicPrefab;
     public float projectileSpeed = 5f;
 
+    private int lastBattleKnights;
+    private int lastBattleArchers;
+    private int lastBattleMages;
     public void PlayAttackEffect(BasePiece attacker, BasePiece defender)
     {
         GameObject effect = null;
@@ -498,7 +501,9 @@ public class PieceManager : MonoBehaviour
     public void StartBattle()
     {
         if (mBattleInProgress) return;
-
+        lastBattleKnights = mMyMinis.Count(u => u is Knight);
+        lastBattleArchers = mMyMinis.Count(u => u is Archer);
+        lastBattleMages = mMyMinis.Count(u => u is Mage);
         StopTimer();
 
         // Останавливаем звук таймера
@@ -519,6 +524,7 @@ public class PieceManager : MonoBehaviour
 
         while (mMyMinis.Count > 0 && mEnemyMinis.Count > 0 && roundCount < maxRounds)
         {
+            
             roundCount++;
             CleanDeadUnits();
             List<BasePiece> allUnits = GetAliveUnits();
@@ -627,6 +633,7 @@ public class PieceManager : MonoBehaviour
             AudioManager.Instance?.PlayRoundLose();
         }
         float currentFitness = CalculateFitness();
+        LogBattleStats(playerWon);
         UpdateScoreUI();
         mBattleInProgress = false;
         IsBattleActive = false;
@@ -1018,5 +1025,24 @@ public class PieceManager : MonoBehaviour
         }
         
         return baseBudget + survivorBonus;
+    }
+    public void LogBattleStats(bool playerWon)
+    {
+        string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+        string filePath = Path.Combine(projectRoot, "BattleLogs.csv");
+        bool fileExists = File.Exists(filePath);
+
+        // Используем ЗАПОМНЕННЫЕ переменные
+        string logLine = $"{currentRound},{ (playerWon ? 1 : 0) },{lastBattleKnights},{lastBattleArchers},{lastBattleMages},{CalculateFitness()}\n";
+        
+        if (!fileExists)
+        {
+            string header = "Round,Win,Knights,Archers,Mages,Fitness\n";
+            File.WriteAllText(filePath, header + logLine);
+        }
+        else
+        {
+            File.AppendAllText(filePath, logLine);
+        }
     }
 }
