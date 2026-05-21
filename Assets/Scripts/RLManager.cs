@@ -13,6 +13,7 @@ public class RLManager : MonoBehaviour
     public bool useRL = false;
     public string pythonHost = "127.0.0.1";
     public int pythonPort = 65432;
+    public bool trainRL = false;  // ← ДОБАВЬ: false = только игра, без обучения
 
     private TcpClient mClient;
     private NetworkStream mStream;
@@ -195,7 +196,8 @@ public class RLManager : MonoBehaviour
 
         var culture = System.Globalization.CultureInfo.InvariantCulture;
         string numbers = string.Join(",", System.Array.ConvertAll(safe, x => x.ToString(culture)));
-        string json = $"{{\"state\":[{numbers}],\"unit_id\":\"{unitId}\"}}";
+        string json = $"{{\"state\":[{numbers}],\"unit_id\":\"{unitId}\",\"train\":{trainRL.ToString().ToLower()}}}";
+
 
         try
         {
