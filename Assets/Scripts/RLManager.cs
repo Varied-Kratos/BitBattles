@@ -22,9 +22,18 @@ public class RLManager : MonoBehaviour
     public Board board;
 
     // Для расчёта наград между шагами
-    private Dictionary<string, float> prevHP = new Dictionary<string, float>();
-    private Dictionary<string, float> prevDist = new Dictionary<string, float>();
-    private Dictionary<string, bool> killedEnemy = new Dictionary<string, bool>();
+    private Dictionary<string, ExperienceBuffer> unitExperience = new Dictionary<string, ExperienceBuffer>();
+
+    // Буфер для хранения предыдущего опыта
+    private class ExperienceBuffer
+    {
+        public float[] prevState;
+        public int prevAction;
+        public float prevHP;
+        public float prevEnemyHP;
+        public Vector2Int prevPos;
+        public bool prevCanAttack;
+    }
 
     void Awake()
     {
@@ -67,7 +76,7 @@ public class RLManager : MonoBehaviour
     }
 
     // --------------------------------------------------
-    // Вектор состояния (Строго 27 элементов для нейросети)
+    // Вектор состояния (27 элементов)
     // --------------------------------------------------
     public float[] GetUnitState(BasePiece unit)
     {
@@ -77,11 +86,11 @@ public class RLManager : MonoBehaviour
 
         Vector2Int pos = unit.mCurrentCell.mBoardPosition;
 
-        // 0-1: Свои координаты (нормализованные)
+        // 0-1: Свои координаты
         s[0] = pos.x / 4f;
         s[1] = pos.y / 9f;
 
-        // 2: Текущее HP (0.0 - 1.0)
+        // 2: Текущее HP
         s[2] = (float)unit.currentHP / unit.maxHP;
 
         // 3: Уровень юнита
@@ -100,65 +109,56 @@ public class RLManager : MonoBehaviour
             s[8] = unit.CanAttackTarget(enemy) ? 1f : 0f;
         }
 
-        // 9-16: Окружение в радиусе 1 (ровно 8 ячеек вокруг)
+        // 9-16: Окружение в радиусе 1
         FillRingNeighbors(s, 9, pos, 1, unit);
 
-        // 17-25: Окружение на векторе атаки (9 фиксированных точек сканирования)
-        // Для ближников берем шаг 2, для дальников — их реальный attackRange
+        // 17-25: Окружение на векторе атаки
         int range = (unit.attackRange <= 1) ? 2 : unit.attackRange;
         FillRingNeighbors(s, 17, pos, range, unit);
 
-        // 26: Флаг нахождения за препятствием (укрытие)
+        // 26: Флаг нахождения за препятствием
         s[26] = IsBehindCover(unit) ? 1f : 0f;
 
         return s;
     }
 
-    // Заполняет ровно 8 слотов в массиве, сканируя окружение по направлениям компаса
     private void FillRingNeighbors(float[] arr, int start, Vector2Int pos, int radius, BasePiece unit)
     {
         int idx = start;
+        int[] dx = { -1, 0, 1, -1, 1, -1, 0, 1 };
+        int[] dy = { -1, -1, -1, 0, 0, 1, 1, 1 };
 
-        // Жестко заданный порядок обхода 8 направлений, гарантирующий константный размер подмассива
-        for (int dy = -1; dy <= 1; dy++)
+        for (int i = 0; i < 8; i++)
         {
-            for (int dx = -1; dx <= 1; dx++)
+            if (idx >= arr.Length || idx >= start + 8) return;
+
+            int nx = pos.x + dx[i] * radius;
+            int ny = pos.y + dy[i] * radius;
+
+            if (nx < 0 || nx >= 5 || ny < 0 || ny >= 10)
             {
-                if (dx == 0 && dy == 0) continue; 
-                if (idx >= arr.Length || idx >= start + 8) return; 
-
-                // Масштабируем шаг сканирования на величину радиуса
-                int nx = pos.x + (dx * radius);
-                int ny = pos.y + (dy * radius);
-
-                if (nx < 0 || nx >= 5 || ny < 0 || ny >= 10)
+                arr[idx++] = -1f;
+            }
+            else if (pieceManager.blockedCells.Contains(new Vector2Int(nx, ny)))
+            {
+                arr[idx++] = -2f;
+            }
+            else if (pieceManager.healCells.Contains(new Vector2Int(nx, ny)))
+            {
+                arr[idx++] = 3f;
+            }
+            else
+            {
+                Cell cell = board.mAllCells[nx, ny];
+                if (cell == null || cell.mCurrentPiece == null)
                 {
-                    arr[idx++] = -1f; // Край карты / Стена
+                    arr[idx++] = 0f;
                 }
                 else
                 {
-                    if (pieceManager.blockedCells.Contains(new Vector2Int(nx, ny)))
-                    {
-                        arr[idx++] = -2f; // Препятствие (Камень)
-                    }
-                    else if (pieceManager.healCells.Contains(new Vector2Int(nx, ny)))
-                    {
-                        arr[idx++] = 3f; // Руна лечения
-                    }
-                    else
-                    {
-                        Cell cell = board.mAllCells[nx, ny];
-                        if (cell == null || cell.mCurrentPiece == null)
-                        {
-                            arr[idx++] = 0f; // Пустая клетка
-                        }
-                        else
-                        {
-                            BasePiece other = cell.mCurrentPiece;
-                            bool sameTeam = unit.name.Contains("Player") == other.name.Contains("Player");
-                            arr[idx++] = sameTeam ? 1f : 2f; // 1 - союзник, 2 - враг
-                        }
-                    }
+                    BasePiece other = cell.mCurrentPiece;
+                    bool sameTeam = unit.name.Contains("Player") == other.name.Contains("Player");
+                    arr[idx++] = sameTeam ? 1f : 2f;
                 }
             }
         }
@@ -178,14 +178,15 @@ public class RLManager : MonoBehaviour
         int dx = Mathf.Clamp(dir.x, -1, 1);
         int dy = Mathf.Clamp(dir.y, -1, 1);
         Vector2Int checkPos = myPos - new Vector2Int(dx, dy);
-        
+
         if (checkPos.x < 0 || checkPos.x >= 5 || checkPos.y < 0 || checkPos.y >= 10)
             return false;
 
         return pieceManager.blockedCells.Contains(checkPos);
     }
 
-    private int SendStateAndGetAction(float[] state, float reward, bool done, string unitId)
+    // ИСПРАВЛЕНО: Отправляем state и получаем action, потом считаем reward
+    private int SendStateAndGetAction(float[] state, string unitId)
     {
         if (!mConnected) return UnityEngine.Random.Range(0, 5);
 
@@ -194,7 +195,7 @@ public class RLManager : MonoBehaviour
 
         var culture = System.Globalization.CultureInfo.InvariantCulture;
         string numbers = string.Join(",", System.Array.ConvertAll(safe, x => x.ToString(culture)));
-        string json = $"{{\"state\":[{numbers}],\"reward\":{reward.ToString(culture)},\"done\":{done.ToString().ToLower()},\"unit_id\":\"{unitId}\"}}";
+        string json = $"{{\"state\":[{numbers}],\"unit_id\":\"{unitId}\"}}";
 
         try
         {
@@ -204,7 +205,7 @@ public class RLManager : MonoBehaviour
             byte[] buffer = new byte[1024];
             int bytesRead = mStream.Read(buffer, 0, buffer.Length);
             string response = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
-            
+
             int action = 0;
             if (response.Contains("\"action\":"))
             {
@@ -224,6 +225,34 @@ public class RLManager : MonoBehaviour
         }
     }
 
+    // ИСПРАВЛЕНО: Отправляем опыт (state, action, reward, next_state, done)
+    private void SendExperience(float[] state, int action, float reward, float[] nextState, bool done, string unitId)
+    {
+        if (!mConnected) return;
+
+        float[] safeState = new float[27];
+        float[] safeNextState = new float[27];
+        Array.Copy(state, safeState, Math.Min(state.Length, 27));
+        Array.Copy(nextState, safeNextState, Math.Min(nextState.Length, 27));
+
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        string stateStr = string.Join(",", System.Array.ConvertAll(safeState, x => x.ToString(culture)));
+        string nextStateStr = string.Join(",", System.Array.ConvertAll(safeNextState, x => x.ToString(culture)));
+
+        string json = $"{{\"state\":[{stateStr}],\"action\":{action},\"reward\":{reward.ToString(culture)},\"next_state\":[{nextStateStr}],\"done\":{done.ToString().ToLower()},\"unit_id\":\"{unitId}\"}}";
+
+        try
+        {
+            byte[] data = Encoding.UTF8.GetBytes(json + "\n");
+            mStream.Write(data, 0, data.Length);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("Ошибка отправки опыта: " + e.Message);
+            mConnected = false;
+        }
+    }
+
     public void ApplyAction(BasePiece unit, int action)
     {
         if (unit == null || unit.mCurrentCell == null) return;
@@ -233,11 +262,11 @@ public class RLManager : MonoBehaviour
 
         switch (action)
         {
-            case 1: newPos = pos + new Vector2Int(0, 1); break;   // Вверх
-            case 2: newPos = pos + new Vector2Int(0, -1); break;  // Вниз
-            case 3: newPos = pos + new Vector2Int(-1, 0); break;  // Влево
-            case 4: newPos = pos + new Vector2Int(1, 0); break;   // Вправо
-            default: break;                                       // 0 - Пропуск хода
+            case 1: newPos = pos + new Vector2Int(0, 1); break;
+            case 2: newPos = pos + new Vector2Int(0, -1); break;
+            case 3: newPos = pos + new Vector2Int(-1, 0); break;
+            case 4: newPos = pos + new Vector2Int(1, 0); break;
+            default: break;
         }
 
         if (action >= 1 && action <= 4)
@@ -249,7 +278,7 @@ public class RLManager : MonoBehaviour
             }
         }
 
-        // Выполнение атаки после фазы движения
+        // Выполнение атаки после движения
         BasePiece enemy = unit.FindNearestEnemy();
         if (enemy != null && enemy != unit && unit.CanAttackTarget(enemy))
         {
@@ -258,84 +287,127 @@ public class RLManager : MonoBehaviour
             if (unitIsPlayer != enemyIsPlayer)
             {
                 unit.AttackTarget(enemy);
-                if (enemy.currentHP <= 0)
-                    killedEnemy[unit.name] = true;
             }
         }
     }
 
     // --------------------------------------------------
-    // Выполнение шага агента с расчетом награды
+    // ИСПРАВЛЕННАЯ логика RL шага
     // --------------------------------------------------
     public void RLTurn(BasePiece unit)
     {
         if (unit == null || unit.mCurrentCell == null) return;
 
         string id = unit.name;
-        float reward = 0f;
-        bool done = false;
 
-        float currentHP = unit.currentHP;
-        float currentDist = DistanceToNearestEnemy(unit);
+        // 1. Получаем текущее состояние
+        float[] currentState = GetUnitState(unit);
 
-        // Расчет награды строго на основании дельты с ПРЕДЫДУЩЕГО шага
-        if (prevHP.ContainsKey(id))
+        // 2. Сохраняем данные ДО действия
+        BasePiece nearestEnemy = unit.FindNearestEnemy();
+        float enemyHPBefore = (nearestEnemy != null && nearestEnemy.gameObject.activeSelf) ? nearestEnemy.currentHP : 0f;
+        float myHPBefore = unit.currentHP;
+        bool couldAttackBefore = nearestEnemy != null && unit.CanAttackTarget(nearestEnemy);
+
+        // 3. Если есть предыдущий опыт — отправляем его с reward
+        if (unitExperience.ContainsKey(id))
         {
-            // 1. ШТРАФ ЗА ВРЕМЯ (каждый шаг стоит немного "энергии", чтобы агент не топтался на месте)
-            reward -= 0.02f; 
+            ExperienceBuffer exp = unitExperience[id];
 
-            // 2. Изменение здоровья
-            float hpDiff = currentHP - prevHP[id];
-            reward += hpDiff * 0.1f; // Урон = минус, хилка = плюс
+            // Считаем награду за ПРЕДЫДУЩЕЕ действие
+            float reward = CalculateReward(unit, exp, myHPBefore, enemyHPBefore, couldAttackBefore);
+            bool done = unit.currentHP <= 0;
 
-            // 3. Убийство врага
-            if (killedEnemy.ContainsKey(id) && killedEnemy[id])
+            // Отправляем опыт
+            SendExperience(exp.prevState, exp.prevAction, reward, currentState, done, id);
+
+            if (done)
             {
-                reward += 5f; 
-                killedEnemy[id] = false;
-            }
-
-            // 4. Приближение к цели
-            float distDiff = prevDist[id] - currentDist;
-            reward += distDiff * 0.01f; 
-
-            // 5. Бонус за укрытие (для Archer/Mage)
-            if ((unit is Archer || unit is Mage) && IsBehindCover(unit))
-                reward += 0.5f;
-
-            // 6. Подбор руны лечения (если здоровье выросло само, без атаки)
-            if (hpDiff > 0 && !unit.CanAttackTarget(unit.FindNearestEnemy()))
-                reward += 3f;
-
-            // 7. Смерть юнита
-            if (currentHP <= 0)
-            {
-                reward -= 10f; 
-                done = true;
+                unitExperience.Remove(id);
+                return; // Юнит умер, не даём новое действие
             }
         }
 
-        // Запрос действия у Python модели
-        float[] state = GetUnitState(unit);
-        int action = SendStateAndGetAction(state, reward, done, id);
-        
-        // Применение экшена в симуляции Unity
+        // 4. Запрашиваем новое действие
+        int action = SendStateAndGetAction(currentState, id);
+
+        // 5. Выполняем действие
         ApplyAction(unit, action);
 
-        // Обновление истории шагов строго ПОСЛЕ изменения состояния среды
-        if (!done)
+        // 6. Сохраняем опыт для следующего шага
+        unitExperience[id] = new ExperienceBuffer
         {
-            prevHP[id] = unit.currentHP;
-            prevDist[id] = DistanceToNearestEnemy(unit);
-            if (!killedEnemy.ContainsKey(id)) killedEnemy[id] = false;
-        }
-        else
-        {
-            prevHP.Remove(id);
-            prevDist.Remove(id);
-            killedEnemy.Remove(id);
-        }
+            prevState = currentState,
+            prevAction = action,
+            prevHP = myHPBefore,
+            prevEnemyHP = enemyHPBefore,
+            prevPos = unit.mCurrentCell.mBoardPosition,
+            prevCanAttack = couldAttackBefore
+        };
     }
+
+    // ИСПРАВЛЕННАЯ функция награды
+    private float CalculateReward(BasePiece unit, ExperienceBuffer exp, float currentHP, float currentEnemyHP, bool canAttackNow)
+    {
+        float reward = 0f;
+
+        // 1. Маленький штраф за существование (стимул действовать)
+        reward -= 0.01f;
+
+        // 2. Награда за УРОН врагу (САМОЕ ВАЖНОЕ)
+        if (exp.prevEnemyHP > 0)
+        {
+            float damageDealt = exp.prevEnemyHP - currentEnemyHP;
+            if (damageDealt > 0)
+            {
+                reward += damageDealt * 0.5f; // +0.5 за каждую единицу урона
+
+                // Бонус за убийство
+                if (currentEnemyHP <= 0)
+                {
+                    reward += 15f;
+                }
+            }
+        }
+
+        // 3. Штраф за ПОЛУЧЕННЫЙ урон
+        float hpLost = exp.prevHP - currentHP;
+        if (hpLost > 0)
+        {
+            reward -= hpLost * 0.3f; // -0.3 за каждую единицу своего HP
+
+            // Дополнительный штраф за смерть
+            if (currentHP <= 0)
+            {
+                reward -= 20f;
+            }
+        }
+
+        // 4. Награда за приближение к врагу (только для ближнего боя)
+        if (unit is Knight && exp.prevCanAttack == false && canAttackNow)
+        {
+            reward += 2f; // Бонус за вход в радиус атаки
+        }
+
+        // 5. Бонус за укрытие (для дальнего боя)
+        if ((unit is Archer || unit is Mage) && IsBehindCover(unit))
+        {
+            BasePiece enemy = unit.FindNearestEnemy();
+            if (enemy != null)
+            {
+                reward += 0.3f;
+            }
+        }
+
+        // 6. Бонус за подбор хилки
+        if (currentHP > exp.prevHP && !canAttackNow)
+        {
+            reward += 5f; // Лечение без боя = подобрал хилку
+        }
+
+        return reward;
+    }
+
     private float DistanceToNearestEnemy(BasePiece unit)
     {
         BasePiece enemy = unit.FindNearestEnemy();

@@ -736,6 +736,37 @@ public class PieceManager : MonoBehaviour
     public Sprite[] enemyArcherAttackSprites;
     public Sprite[] enemyMageAttackSprites;
 
+    
+    private void CleanDeadUnits()
+    {
+        mMyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
+        mEnemyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
+    }
+
+    public List<BasePiece> GetAliveUnits()
+    {
+        List<BasePiece> all = new List<BasePiece>();
+        all.AddRange(mMyMinis.Where(u => u != null && u.gameObject.activeSelf));
+        all.AddRange(mEnemyMinis.Where(u => u != null && u.gameObject.activeSelf));
+        return all;
+    }
+
+    
+    public void ClearEnemies()
+    {
+        foreach (BasePiece unit in mEnemyMinis)
+        {
+            if (unit != null)
+            {
+                if (unit.mCurrentCell != null)
+                    unit.mCurrentCell.mCurrentPiece = null;
+                Destroy(unit.gameObject);
+            }
+        }
+        mEnemyMinis.Clear();
+    }
+    // ЗАМЕНИТЕ эти методы в вашем PieceManager.cs:
+
     public BasePiece SpawnUnit(Type unitType, Color teamColor, Color32 spriteColor, Vector2Int pos, bool isPlayer)
     {
         Cell targetCell = mBoard.mAllCells[pos.x, pos.y];
@@ -757,7 +788,7 @@ public class PieceManager : MonoBehaviour
 
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
 
-        // Copy base stats from template
+        // Копируем БАЗОВЫЕ статы (уровень 1)
         newPiece.maxHP = template.maxHP;
         newPiece.currentHP = template.maxHP;
         newPiece.damage = template.damage;
@@ -766,7 +797,7 @@ public class PieceManager : MonoBehaviour
         newPiece.unitID = template.unitID;
         newPiece.cost = GetUnitCost(unitType);
 
-        // Assign sprites
+        // Назначаем спрайты
         if (isPlayer)
         {
             if (unitType == typeof(Knight)) { newPiece.levelSprites = knightSprites; newPiece.attackSprites = knightAttackSprites; }
@@ -780,18 +811,11 @@ public class PieceManager : MonoBehaviour
             else if (unitType == typeof(Mage)) { newPiece.levelSprites = enemyMageSprites; newPiece.attackSprites = enemyMageAttackSprites; }
         }
 
-        // Call Setup - this will call ApplyLevelStats for level 1
+        // Setup БЕЗ применения уровневых статов
         newPiece.Setup(isPlayer, teamColor, spriteColor, this);
 
-        Image img = newPiece.GetComponent<Image>();
-        if (img != null) img.color = Color.white;
-
-        // REMOVED: The double-application of level stats
-        // if (newPiece.level > 1)
-        // {
-        //     newPiece.ApplyLevelStats();
-        //     newPiece.UpdateLevelAppearance();
-        // }
+        // ВАЖНО: Не вызываем ApplyLevelStats здесь!
+        // Уровень будет установлен ВЫЗЫВАЮЩИМ кодом после SpawnUnit
 
         newPiece.Place(targetCell);
 
@@ -800,20 +824,62 @@ public class PieceManager : MonoBehaviour
 
         return newPiece;
     }
-    private void CleanDeadUnits()
+
+    public float CalculateFitness()
     {
-        mMyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
-        mEnemyMinis.RemoveAll(u => u == null || !u.gameObject.activeSelf);
+        // Считаем, сколько урона нанесли враги игроку
+        int initialPlayerUnits = savedPlayerUnits.Count;
+
+        if (initialPlayerUnits == 0)
+        {
+            // Игрок не выставил юнитов — наказываем врагов
+            return -5f;
+        }
+
+        // 1. Очки за убийство игроков (главная цель)
+        int killedPlayerUnits = 0;
+        foreach (var saved in savedPlayerUnits)
+        {
+            bool stillAlive = mMyMinis.Any(u => u != null &&
+                              u.mCurrentCell != null &&
+                              u.mCurrentCell.mBoardPosition == saved.position &&
+                              u.currentHP > 0);
+            if (!stillAlive) killedPlayerUnits++;
+        }
+        float killScore = killedPlayerUnits * 3.0f;
+
+        // 2. Очки за нанесённый урон (в процентах от maxHP)
+        float totalPlayerMaxHP = savedPlayerUnits.Sum(u => u.maxHP);
+        float totalPlayerCurrentHP = mMyMinis.Where(u => u != null && u.gameObject.activeSelf).Sum(u => u.currentHP);
+        float damagePercent = (totalPlayerMaxHP - totalPlayerCurrentHP) / Mathf.Max(totalPlayerMaxHP, 1f);
+        float damageScore = damagePercent * 5.0f;
+
+        // 3. Бонус за выживаемость врагов
+        int survivingEnemies = mEnemyMinis.Count(u => u != null && u.gameObject.activeSelf && u.currentHP > 0);
+        float survivalBonus = survivingEnemies * 0.5f;
+
+        // 4. Огромный бонус за полный вайпаут игрока
+        float wipeoutBonus = 0f;
+        if (mMyMinis.Count == 0 || mMyMinis.All(u => u == null || !u.gameObject.activeSelf || u.currentHP <= 0))
+        {
+            wipeoutBonus = 10f;
+        }
+
+        // 5. Штраф за смерть всех врагов
+        if (mEnemyMinis.Count == 0 || mEnemyMinis.All(u => u == null || !u.gameObject.activeSelf || u.currentHP <= 0))
+        {
+            return -10f;
+        }
+
+        float totalFitness = killScore + damageScore + survivalBonus + wipeoutBonus;
+
+        Debug.Log($"GA Fitness: убито={killedPlayerUnits}, урон={damagePercent:P1}, выжило={survivingEnemies}, итог={totalFitness:F2}");
+
+        return totalFitness;
     }
 
-    public List<BasePiece> GetAliveUnits()
-    {
-        List<BasePiece> all = new List<BasePiece>();
-        all.AddRange(mMyMinis.Where(u => u != null && u.gameObject.activeSelf));
-        all.AddRange(mEnemyMinis.Where(u => u != null && u.gameObject.activeSelf));
-        return all;
-    }
 
+    // Исправленный спавн врагов (уровень применяется ОДИН раз)
     public void SpawnEnemyLayout(string data)
     {
         ClearEnemies();
@@ -839,33 +905,19 @@ public class PieceManager : MonoBehaviour
             Type t = GetTypeByID(unitTypeID);
             if (t == null) continue;
 
+            // Спавним с БАЗОВЫМИ статами
             BasePiece newEnemy = SpawnUnit(t, Color.black, GetColorByUnitType(unitTypeID), new Vector2Int(x, y), false);
 
             if (newEnemy != null)
             {
-                // Set level BEFORE applying stats
+                // Устанавливаем уровень ОДИН раз и применяем статы
                 newEnemy.level = unitLevel;
-                // ApplyLevelStats multiplies the BASE stats by the level multiplier
-                newEnemy.ApplyLevelStats();
+                newEnemy.ApplyLevelStats();      // Применяем множитель уровня
                 newEnemy.UpdateLevelAppearance();
                 newEnemy.RefreshHealthBar();
             }
         }
     }
-    public void ClearEnemies()
-    {
-        foreach (BasePiece unit in mEnemyMinis)
-        {
-            if (unit != null)
-            {
-                if (unit.mCurrentCell != null)
-                    unit.mCurrentCell.mCurrentPiece = null;
-                Destroy(unit.gameObject);
-            }
-        }
-        mEnemyMinis.Clear();
-    }
-
     private Type GetTypeByID(int id)
     {
         if (id == 1) return typeof(Knight);
@@ -984,36 +1036,7 @@ public class PieceManager : MonoBehaviour
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 
-    public float CalculateFitness() 
-    {
-        // 1. Считаем ТЕКУЩЕЕ живое HP сторон
-        float currentEnemyHP = mEnemyMinis.Sum(u => u.currentHP);
-        float currentPlayerHP = mMyMinis.Sum(u => u.currentHP);
-
-        // 2. Считаем МАКСИМАЛЬНОЕ (стартовое) HP заспавненных армий
-        // Заменяем 'maxHP' на то имя поля, которое у тебя отвечает за максимальное здоровье юнита
-        float maxEnemyHP = mEnemyMinis.Sum(u => u.maxHP); 
-        float maxPlayerHP = mMyMinis.Sum(u => u.maxHP);
-
-        // Защита от деления на ноль
-        if (maxEnemyHP <= 0) maxEnemyHP = 1;
-        if (maxPlayerHP <= 0) maxPlayerHP = 1;
-
-        // 3. Переводим в относительные проценты (от 0.0 до 1.0)
-        float enemyRatio = currentEnemyHP / maxEnemyHP;
-        float playerRatio = currentPlayerHP / maxPlayerHP;
-
-        // Базовый фитнес теперь строго в диапазоне от -1.0 до +1.0
-        float baseFitness = enemyRatio - playerRatio;
-
-        // 4. Добавляем жирный бонус за полный разгром игрока (Wipeout)
-        if (currentPlayerHP <= 0 && currentEnemyHP > 0)
-        {
-            baseFitness += 3.0f; 
-        }
-
-        return baseFitness;
-    }
+    
     public int CalculateEnemyBudget()
     {
         
