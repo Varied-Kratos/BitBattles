@@ -862,7 +862,7 @@ MonoBehaviour:
   elixirText: {fileID: 2075555477}
   playerWins: 0
   enemyWins: 0
-  winsToWin: 100
+  winsToWin: 300
   currentRound: 1
   roundText: {fileID: 1966835824}
   scoreText: {fileID: 473645725}
@@ -1911,6 +1911,7 @@ MonoBehaviour:
   useRL: 1
   pythonHost: 127.0.0.1
   pythonPort: 65432
+  trainRL: 0
   pieceManager: {fileID: 451089945}
   board: {fileID: 451089946}
 --- !u!4 &860166830
