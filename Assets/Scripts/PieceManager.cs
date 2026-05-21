@@ -512,7 +512,7 @@ public class PieceManager : MonoBehaviour
         StartCoroutine(BattleLoop());
     }
 
-   private IEnumerator BattleLoop()
+    private IEnumerator BattleLoop()
     {
         int maxRounds = 50;
         int roundCount = 0;
@@ -523,42 +523,26 @@ public class PieceManager : MonoBehaviour
             CleanDeadUnits();
             List<BasePiece> allUnits = GetAliveUnits();
 
-            // Будем хранить не сам объект врага (который может умереть), 
-            // а позицию, куда должна прилететь стрела/магия в случае смерти
             Dictionary<BasePiece, BasePiece> attacks = new Dictionary<BasePiece, BasePiece>();
-            Dictionary<BasePiece, Vector3> deathTargetPositions = new Dictionary<BasePiece, Vector3>();
             Dictionary<BasePiece, Cell> desiredMoves = new Dictionary<BasePiece, Cell>();
 
             foreach (BasePiece unit in allUnits)
             {
                 if (unit == null || !unit.gameObject.activeSelf) continue;
 
-                if (RLManager.Instance != null && RLManager.Instance.useRL)
+                if (MultiRLManager.Instance != null && MultiRLManager.Instance.useRL)
                 {
-                    BasePiece targetEnemy = unit.FindNearestEnemy();
-                    float enemyHPBefore = (targetEnemy != null) ? targetEnemy.currentHP : 0f;
-                    Vector3 lastEnemyPos = (targetEnemy != null) ? targetEnemy.transform.position : Vector3.zero;
-
-                    // Ход ИИ (урон наносится тут же внутри)
+                    // RL сам всё делает внутри RLTurnForUnit
+                    MultiRLManager.Instance.RLTurnForUnit(unit);
+                }
+                else if (RLManager.Instance != null && RLManager.Instance.useRL)
+                {
+                    // Одиночный RL
                     RLManager.Instance.RLTurn(unit);
-
-                    // Если урон прошел
-                    if (targetEnemy != null && targetEnemy.currentHP < enemyHPBefore)
-                    {
-                        if (targetEnemy.gameObject.activeSelf && targetEnemy.currentHP > 0)
-                        {
-                            attacks[unit] = targetEnemy;
-                        }
-                        else
-                        {
-                            // Враг погиб от этого удара — запоминаем его координаты, чтобы стрела не выдала ошибку
-                            deathTargetPositions[unit] = lastEnemyPos;
-                        }
-                    }
                 }
                 else
                 {
-                    // Старое поведение
+                    // Обычный ИИ
                     BasePiece enemy = unit.FindNearestEnemy();
                     if (enemy == null || !enemy.gameObject.activeSelf) continue;
 
@@ -573,39 +557,22 @@ public class PieceManager : MonoBehaviour
                 }
             }
 
-            // Отработка перемещений для ручного режима
+            // Движение (только для обычного ИИ)
             foreach (var kvp in desiredMoves)
                 if (kvp.Key != null && kvp.Key.gameObject.activeSelf && kvp.Value.mCurrentPiece == null)
                     kvp.Key.MoveToCell(kvp.Value);
 
             yield return new WaitForSeconds(0.2f);
 
-            // 1. Визуализируем атаки по живым целям
+            // Атака (только для обычного ИИ)
             foreach (var kvp in attacks)
             {
                 if (kvp.Key != null && kvp.Key.gameObject.activeSelf &&
-                    kvp.Value != null && kvp.Value.gameObject.activeSelf)
+                    kvp.Value != null && kvp.Value.gameObject.activeSelf &&
+                    kvp.Key.CanAttackTarget(kvp.Value))
                 {
                     PlayAttackEffect(kvp.Key, kvp.Value);
-                    
-                    if (RLManager.Instance == null || !RLManager.Instance.useRL)
-                    {
-                        kvp.Key.AttackTarget(kvp.Value);
-                    }
-                }
-            }
-
-            // 2. Визуализируем фатальные атаки (для RL, если врага испарило мгновенным уроном)
-            foreach (var kvp in deathTargetPositions)
-            {
-                if (kvp.Key != null && kvp.Key.gameObject.activeSelf)
-                {
-                    // Спавним временную пустышку на месте гибели, чтобы FlyProjectile не упал с ошибкой
-                    GameObject dummyTarget = new GameObject("DummyTarget");
-                    dummyTarget.transform.position = kvp.Value;
-                    
-                    PlayAttackEffect(kvp.Key, dummyTarget.AddComponent<Knight>()); // Тип не важен, нужен лишь transform
-                    Destroy(dummyTarget, 0.4f); // Удаляем пустышку после долета снаряда
+                    kvp.Key.AttackTarget(kvp.Value);
                 }
             }
 
@@ -626,6 +593,7 @@ public class PieceManager : MonoBehaviour
             playerWon = false;
             AudioManager.Instance?.PlayRoundLose();
         }
+
         float currentFitness = CalculateFitness();
         UpdateScoreUI();
         mBattleInProgress = false;
