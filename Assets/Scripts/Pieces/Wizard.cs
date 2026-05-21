@@ -13,9 +13,6 @@ public class Mage : BasePiece
         cost = 4;
 
         base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
-        if (level > 1) 
-        {
-            ApplyLevelStats();
-        }
+        // REMOVE: ApplyLevelStats();
     }
 }

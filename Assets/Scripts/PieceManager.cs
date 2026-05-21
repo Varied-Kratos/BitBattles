@@ -363,15 +363,29 @@ public class PieceManager : MonoBehaviour
                 BasePiece piece = SpawnUnit(type, Color.white, GetColorForType(data.unitType), data.position, true);
                 if (piece != null)
                 {
-                    piece.currentHP = data.currentHP;
+                    // Set saved values directly - DON'T call ApplyLevelStats again
+                    piece.level = data.level;
                     piece.maxHP = data.maxHP;
-                    piece.level = data.level; // ← ВОССТАНАВЛИВАЕМ УРОВЕНЬ
-                    piece.ApplyLevelStats();   // ← ПЕРЕСЧИТЫВАЕМ СТАТЫ
-                    piece.UpdateLevelAppearance(); // ← ОБНОВЛЯЕМ ВИЗУАЛ
+                    piece.currentHP = data.currentHP;
+                    piece.damage = Mathf.RoundToInt(piece.damage * GetLevelMultiplier(data.level));
+                    piece.UpdateLevelAppearance();
+                    piece.RefreshHealthBar();
                 }
             }
         }
         Debug.Log($"Восстановлено юнитов: {mMyMinis.Count}");
+    }
+
+    // Add this helper method to BasePiece
+    public float GetLevelMultiplier(int lvl)
+    {
+        switch (lvl)
+        {
+            case 1: return 1f;
+            case 2: return 2f;
+            case 3: return 4.5f;
+            default: return 1f;
+        }
     }
 
     private Type GetTypeByName(string name)
@@ -726,7 +740,6 @@ public class PieceManager : MonoBehaviour
     {
         Cell targetCell = mBoard.mAllCells[pos.x, pos.y];
 
-        
         BasePiece template = null;
         if (unitType == typeof(Knight)) template = knightPrefab;
         else if (unitType == typeof(Archer)) template = archerPrefab;
@@ -738,14 +751,13 @@ public class PieceManager : MonoBehaviour
             return null;
         }
 
-        
         GameObject newPieceObject = Instantiate(mPiecePrefab, transform);
         newPieceObject.transform.localScale = Vector3.one;
         newPieceObject.name = $"{unitType.Name}_{(isPlayer ? "Player" : "Enemy")}";
 
         BasePiece newPiece = (BasePiece)newPieceObject.AddComponent(unitType);
 
-        
+        // Copy base stats from template
         newPiece.maxHP = template.maxHP;
         newPiece.currentHP = template.maxHP;
         newPiece.damage = template.damage;
@@ -754,7 +766,7 @@ public class PieceManager : MonoBehaviour
         newPiece.unitID = template.unitID;
         newPiece.cost = GetUnitCost(unitType);
 
-        
+        // Assign sprites
         if (isPlayer)
         {
             if (unitType == typeof(Knight)) { newPiece.levelSprites = knightSprites; newPiece.attackSprites = knightAttackSprites; }
@@ -768,17 +780,18 @@ public class PieceManager : MonoBehaviour
             else if (unitType == typeof(Mage)) { newPiece.levelSprites = enemyMageSprites; newPiece.attackSprites = enemyMageAttackSprites; }
         }
 
+        // Call Setup - this will call ApplyLevelStats for level 1
         newPiece.Setup(isPlayer, teamColor, spriteColor, this);
 
-        
         Image img = newPiece.GetComponent<Image>();
         if (img != null) img.color = Color.white;
 
-        if (newPiece.level > 1)
-        {
-            newPiece.ApplyLevelStats();
-            newPiece.UpdateLevelAppearance();
-        }
+        // REMOVED: The double-application of level stats
+        // if (newPiece.level > 1)
+        // {
+        //     newPiece.ApplyLevelStats();
+        //     newPiece.UpdateLevelAppearance();
+        // }
 
         newPiece.Place(targetCell);
 
@@ -804,39 +817,38 @@ public class PieceManager : MonoBehaviour
     public void SpawnEnemyLayout(string data)
     {
         ClearEnemies();
-        
-        // Убираем лишние пробелы и разбиваем по запятой
+
         string[] units = data.Trim().Split(',');
 
         for (int i = 0; i < units.Length; i++)
         {
-            if (i >= 25) break; // Сетка врага 5x5
-            
+            if (i >= 25) break;
+
             if (string.IsNullOrEmpty(units[i])) continue;
 
             string[] parts = units[i].Split(':');
             int unitTypeID = int.Parse(parts[0]);
-            
-            if (unitTypeID == 0) continue; // Пустая клетка
 
-            // БЕЗОПАСНЫЙ ПАРСИНГ УРОВНЯ:
-            // Если Python прислал "1:2" -> уровень 2. Если просто "1" -> уровень 1.
+            if (unitTypeID == 0) continue;
+
             int unitLevel = (parts.Length > 1) ? int.Parse(parts[1]) : 1;
-            
+
             int x = i % 5;
-            int y = (i / 5) + 5; // Вражеская половина (ряды 5-9)
+            int y = (i / 5) + 5;
 
             Type t = GetTypeByID(unitTypeID);
             if (t == null) continue;
 
             BasePiece newEnemy = SpawnUnit(t, Color.black, GetColorByUnitType(unitTypeID), new Vector2Int(x, y), false);
-            
+
             if (newEnemy != null)
             {
+                // Set level BEFORE applying stats
                 newEnemy.level = unitLevel;
-                newEnemy.ApplyLevelStats();      
-                newEnemy.UpdateLevelAppearance(); 
-                newEnemy.RefreshHealthBar(); // Обновляем звёзды/полоску
+                // ApplyLevelStats multiplies the BASE stats by the level multiplier
+                newEnemy.ApplyLevelStats();
+                newEnemy.UpdateLevelAppearance();
+                newEnemy.RefreshHealthBar();
             }
         }
     }

@@ -13,7 +13,6 @@ public class Knight : BasePiece
         cost = 3;
 
         base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
-
-        ApplyLevelStats();
+        // REMOVE: ApplyLevelStats(); - will be called externally after setting level
     }
 }

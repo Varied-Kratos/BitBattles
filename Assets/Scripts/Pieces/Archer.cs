@@ -13,7 +13,6 @@ public class Archer : BasePiece
         cost = 2;
 
         base.Setup(isPlayer, newTeamColor, newSpriteColor, newPieceManager);
-
-        ApplyLevelStats();
+        // REMOVE: ApplyLevelStats();
     }
 }
