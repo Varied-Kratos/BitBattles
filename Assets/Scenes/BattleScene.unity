@@ -862,7 +862,7 @@ MonoBehaviour:
   elixirText: {fileID: 2075555477}
   playerWins: 0
   enemyWins: 0
-  winsToWin: 50
+  winsToWin: 100
   currentRound: 1
   roundText: {fileID: 1966835824}
   scoreText: {fileID: 473645725}

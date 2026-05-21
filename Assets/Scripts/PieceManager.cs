@@ -825,16 +825,14 @@ public class PieceManager : MonoBehaviour
         return newPiece;
     }
 
+
     public float CalculateFitness()
     {
-        // Считаем, сколько урона нанесли враги игроку
         int initialPlayerUnits = savedPlayerUnits.Count;
+        int initialEnemyUnits = mEnemyMinis.Count;
 
-        if (initialPlayerUnits == 0)
-        {
-            // Игрок не выставил юнитов — наказываем врагов
-            return -5f;
-        }
+        if (initialEnemyUnits == 0) return -10f;
+        if (initialPlayerUnits == 0) return 5f; // Игрок без юнитов — враги молодцы
 
         // 1. Очки за убийство игроков (главная цель)
         int killedPlayerUnits = 0;
@@ -846,39 +844,43 @@ public class PieceManager : MonoBehaviour
                               u.currentHP > 0);
             if (!stillAlive) killedPlayerUnits++;
         }
-        float killScore = killedPlayerUnits * 3.0f;
+        float killScore = killedPlayerUnits * 5.0f; // Увеличено с 3 до 5
 
-        // 2. Очки за нанесённый урон (в процентах от maxHP)
+        // 2. Очки за нанесённый урон (поощряем агрессию)
         float totalPlayerMaxHP = savedPlayerUnits.Sum(u => u.maxHP);
         float totalPlayerCurrentHP = mMyMinis.Where(u => u != null && u.gameObject.activeSelf).Sum(u => u.currentHP);
-        float damagePercent = (totalPlayerMaxHP - totalPlayerCurrentHP) / Mathf.Max(totalPlayerMaxHP, 1f);
-        float damageScore = damagePercent * 5.0f;
+        float damageDealt = totalPlayerMaxHP - totalPlayerCurrentHP;
+        float damageScore = (damageDealt / Mathf.Max(totalPlayerMaxHP, 1f)) * 8.0f; // Увеличено с 5 до 8
 
-        // 3. Бонус за выживаемость врагов
+        // 3. Выживаемость врагов (важно, но не главное)
         int survivingEnemies = mEnemyMinis.Count(u => u != null && u.gameObject.activeSelf && u.currentHP > 0);
-        float survivalBonus = survivingEnemies * 0.5f;
+        float survivalRatio = (float)survivingEnemies / Mathf.Max(initialEnemyUnits, 1);
+        float survivalScore = survivalRatio * 3.0f; // Увеличено с 0.5 за юнита до 3.0 за всех
 
-        // 4. Огромный бонус за полный вайпаут игрока
-        float wipeoutBonus = 0f;
-        if (mMyMinis.Count == 0 || mMyMinis.All(u => u == null || !u.gameObject.activeSelf || u.currentHP <= 0))
+        // 4. Бонус за полную победу (вайпаут)
+        bool playerWipedOut = mMyMinis.Count == 0 || mMyMinis.All(u => u == null || !u.gameObject.activeSelf || u.currentHP <= 0);
+        float wipeoutBonus = playerWipedOut ? 10.0f : 0f;
+
+        // 5. Минимальный фитнес за частичное выживание (защита от -10)
+        bool anyEnemyAlive = survivingEnemies > 0;
+        float survivalFloor = anyEnemyAlive ? 1.0f : 0f;
+
+        float totalFitness = killScore + damageScore + survivalScore + wipeoutBonus;
+
+        // Если все враги умерли, но нанесли урон — не -10, а пропорционально урону
+        if (!anyEnemyAlive)
         {
-            wipeoutBonus = 10f;
+            totalFitness = Mathf.Max(-5f, damageScore - 5f); // Минимум -5 вместо -10
+        }
+        else
+        {
+            totalFitness = Mathf.Max(survivalFloor, totalFitness); // Минимум 1 если выжили
         }
 
-        // 5. Штраф за смерть всех врагов
-        if (mEnemyMinis.Count == 0 || mEnemyMinis.All(u => u == null || !u.gameObject.activeSelf || u.currentHP <= 0))
-        {
-            return -10f;
-        }
-
-        float totalFitness = killScore + damageScore + survivalBonus + wipeoutBonus;
-
-        Debug.Log($"GA Fitness: убито={killedPlayerUnits}, урон={damagePercent:P1}, выжило={survivingEnemies}, итог={totalFitness:F2}");
+        Debug.Log($"GA Fitness: убито={killedPlayerUnits}/{initialPlayerUnits}, урон={damageDealt:F0}/{totalPlayerMaxHP:F0}, выжило={survivingEnemies}/{initialEnemyUnits}, итог={totalFitness:F2}");
 
         return totalFitness;
     }
-
-
     // Исправленный спавн врагов (уровень применяется ОДИН раз)
     public void SpawnEnemyLayout(string data)
     {
