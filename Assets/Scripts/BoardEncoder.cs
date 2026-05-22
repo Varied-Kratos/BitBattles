@@ -18,7 +18,7 @@ public class BoardEncoder : MonoBehaviour
         {
             for (int x = 0; x < width; x++)
             {
-                // Вычисляем индекс так, чтобы он всегда совпадал с порядком в Python
+                 
                 int index = (y * width + x) * featuresPerCell;
                 Cell cell = mBoard.mAllCells[x, y];
                 
@@ -26,13 +26,13 @@ public class BoardEncoder : MonoBehaviour
                 {
                     state[index] = (float)cell.mCurrentPiece.unitID; 
                     
-                    // Проверяем команду: 1.0 для игрока, -1.0 для врага
+                     
                     if (pm.mMyMinis.Contains(cell.mCurrentPiece))
                         state[index + 1] = 1.0f;
                     else if (pm.mEnemyMinis.Contains(cell.mCurrentPiece))
                         state[index + 1] = -1.0f;
                     else
-                        state[index + 1] = 0.0f; // На случай ошибки
+                        state[index + 1] = 0.0f;  
                 }
                 else
                 {
@@ -44,16 +44,16 @@ public class BoardEncoder : MonoBehaviour
         return state;
     }
 
-    // BoardEncoder.cs - ДОБАВИТЬ ЭТОТ МЕТОД, старый GetFlattenedBoardState() НЕ ТРОГАТЬ!
+     
 
     public float[] GetGAState()
     {
-        // 5x5 = 25 клеток (только нижняя половина игрока)
-        float[] state = new float[100]; // 100, потому что 4 слоя по 25
+         
+        float[] state = new float[100];  
         
         PieceManager pm = FindObjectOfType<PieceManager>();
         
-        // СЛОЙ 1 (0-24): Свои юниты
+         
         for (int y = 0; y < 5; y++)
         {
             for (int x = 0; x < 5; x++)
@@ -67,7 +67,7 @@ public class BoardEncoder : MonoBehaviour
             }
         }
         
-        // СЛОЙ 2 (25-49): Камни
+         
         for (int y = 0; y < 5; y++)
         {
             for (int x = 0; x < 5; x++)
@@ -80,7 +80,7 @@ public class BoardEncoder : MonoBehaviour
             }
         }
         
-        // СЛОЙ 3 (50-74): Хилки
+         
         for (int y = 0; y < 5; y++)
         {
             for (int x = 0; x < 5; x++)
@@ -93,7 +93,7 @@ public class BoardEncoder : MonoBehaviour
             }
         }
         
-        // СЛОЙ 4 (75-99): Враги на моей половине
+         
         for (int y = 0; y < 5; y++)
         {
             for (int x = 0; x < 5; x++)
@@ -109,7 +109,7 @@ public class BoardEncoder : MonoBehaviour
         Debug.Log($"[DEBUG] Слой 1 (свои, первая клетка [0]): {state[0]}");
         Debug.Log($"[DEBUG] Слой 4 (враги, первая клетка [75]): {state[75]}");
         
-        return state; // 100 чисел
+        return state;  
     }
 
     void Update()
