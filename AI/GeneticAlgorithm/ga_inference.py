@@ -51,7 +51,7 @@ def decode_output(probs, budget, state_vector):
     
     return ",".join(layout)
 
-# Загружаем ЛУЧШУЮ модель
+ 
 model = BattleNet()
 model.load_state_dict(torch.load('/Users/alan/Desktop/BitBattles/AI/GeneticAlgorithm/best_ga_model_best.pth', map_location='cpu'))
 model.eval()

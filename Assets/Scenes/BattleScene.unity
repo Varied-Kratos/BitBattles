@@ -856,13 +856,13 @@ MonoBehaviour:
   stonePrefab: {fileID: 7096432273562978680, guid: b5ab7b09ae5cc934aa90844d678a105a, type: 3}
   healPrefab: {fileID: 4016920980720187878, guid: 1f6c106ca975e2b448a2ac430f691cbb, type: 3}
   spawnedObjects: []
-  turnDelay: 0.1
+  turnDelay: 0.5
   maxElixir: 10
   currentElixir: 10
   elixirText: {fileID: 2075555477}
   playerWins: 0
   enemyWins: 0
-  winsToWin: 300
+  winsToWin: 5
   currentRound: 1
   roundText: {fileID: 1966835824}
   scoreText: {fileID: 473645725}
@@ -899,7 +899,7 @@ MonoBehaviour:
   - {fileID: -9132967680831066202, guid: 0b89f2f20da20d24e838a485b6e11ab4, type: 3}
   - {fileID: -4919065226261219406, guid: defa08cecdc0ca143a8aa3f278477a46, type: 3}
   - {fileID: -2162593613674392480, guid: f4df1f35408de8f4d86bed4811e6d799, type: 3}
-  autoBattleTime: 5
+  autoBattleTime: 20
   timerText: {fileID: 2066549372}
   timerPanel: {fileID: 502703061}
   roundWinPanel: {fileID: 1939991445}
