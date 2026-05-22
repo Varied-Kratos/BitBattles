@@ -59,7 +59,7 @@ public class PythonConnector : MonoBehaviour
         {
             int enemyBudget = pieceManager.CalculateEnemyBudget();
             int currentRound = pieceManager.currentRound;
-            float[] rawBoard = boardEncoder.GetFlattenedBoardState();
+            float[] rawBoard = boardEncoder.GetGAState();
             
             if (rawBoard == null) return;
 
@@ -104,7 +104,7 @@ public class PythonConnector : MonoBehaviour
                     byte[] buffer = new byte[4096];
                     int bytesRead = stream.Read(buffer, 0, buffer.Length);
                     string response = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
-
+                    Debug.Log($"[DEBUG] Получен ответ: {response}");
                     if (!string.IsNullOrEmpty(response)) {
                         // Передаем ответ в менеджер для спавна конкретного бота
                         pieceManager.SpawnEnemyLayout(response);
