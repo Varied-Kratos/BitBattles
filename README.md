@@ -61,9 +61,36 @@
 
 ## Геймплей и механики
 
+### Менюшка игры
+<img width="834" height="469" alt="изображение" src="https://github.com/user-attachments/assets/4147baed-378c-4ea9-954c-09fdc7a5894c" />
+
+### Начало игры
+#### Создание профиля игрока
+<img width="836" height="471" alt="изображение" src="https://github.com/user-attachments/assets/148cd354-29e7-480b-bc08-d17b49b6312a" />
+
+#### Демонстрация работы загрузки игры.
+
+
+#### Изменение статистики после игры
+<img width="837" height="462" alt="изображение" src="https://github.com/user-attachments/assets/cd154e24-8c11-44b9-8439-f9a67da69023" />
+
+### Процесс игры
+#### Поле боя
+<img width="836" height="463" alt="изображение" src="https://github.com/user-attachments/assets/f5e986c3-22e3-49a4-8316-e3a15cd420ab" />
+
+#### Демонстрация геймплея
+
+### Окончание игры
+#### Поражение
+<img width="838" height="463" alt="изображение" src="https://github.com/user-attachments/assets/f5f2988e-197d-4bed-bb83-aa170df0b0dc" />
+
+#### Победа
+<img width="835" height="467" alt="изображение" src="https://github.com/user-attachments/assets/4bcfd1ff-a3d3-4192-82c0-ad1925663b5d" />
+
 ### Игровое поле
 
 Сетка 5x10: 5 нижних рядов — игрок, 5 верхних — враг. Препятствия (камни) и лечащие объекты (хилки) генерируются случайно.
+- <img width="303" height="462" alt="изображение" src="https://github.com/user-attachments/assets/d22b72ed-61aa-4928-8c90-7dc854cf89e3" />
 
 ### Юниты
 
@@ -72,6 +99,8 @@
 | Рыцарь | 15 | 5 | 1 | 3 |
 | Лучник | 8 | 4 | 3 | 2 |
 | Маг | 6 | 7 | 4 | 4 |
+
+
 
 ### Система уровней
 
@@ -82,10 +111,15 @@
 Начальный эликсир: 10 монет. Пополнение между раундами: +4 монеты. Драфт: случайные 3 карты (можно купить или обновить за 1 монету). Продажа юнита: возврат стоимости минус 1.
 
 ### Бой
+- <img width="827" height="473" alt="изображение" src="https://github.com/user-attachments/assets/5147b8e7-095f-4a8d-bdda-3e86d02b37ac" />
 
 Пошаговый: все юниты одновременно выбирают цель, двигаются, атакуют. Атака автоматическая при входе в радиус. Юниты могут укрываться за камнями (дальнобойные). Лечение при подборе аптечки (+50% HP).
 
 ### Раунды
+
+- <img width="694" height="388" alt="Запись экрана 2026-05-26 214358" src="https://github.com/user-attachments/assets/7a4fe957-2383-49b9-b1db-cc6e0701e9b3" />
+<img width="694" height="388" alt="Запись экрана 2026-05-26 214358" src="https://github.com/user-attachments/assets/6df9642f-96d7-47c6-9779-70e3c6ec8396" />
+<img width="240" height="131" alt="изображение" src="https://github.com/user-attachments/assets/4cdbd78f-18c7-4f66-9da5-4716a5a61362" />
 
 Best of 9 (до 5 побед). Выжившие юниты игрока сохраняются между раундами. Вражеская расстановка генерируется GA-сервером заново каждый раунд. Таймер 20 секунд на расстановку (автостарт).
 
@@ -110,7 +144,7 @@ cd BitBattles
 2. Запустить RL-сервер (в отдельном терминале)
 
 cd AI/ReinforcementLearning
-запустить все ячейки reseacrh_RL.ipynb
+python rl_inference.py
 
 3. Запустить GA-сервер (в другом терминале)
 
