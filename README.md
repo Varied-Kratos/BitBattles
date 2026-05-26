@@ -109,13 +109,13 @@ cd BitBattles
 
 2. Запустить RL-сервер (в отдельном терминале)
 
-cd AI/RL_Server
-python rl_server.py
+cd AI/ReinforcementLearning
+запустить все ячейки reseacrh_RL.ipynb
 
 3. Запустить GA-сервер (в другом терминале)
 
-cd AI/GA_Server
-python ga_server.py
+cd AI/GeneticAlgorithm
+python ga_inference.py
 
 4. Открыть проект в Unity 6
 
@@ -127,7 +127,7 @@ File → Open Project → выбрать папку BitBattles
 Assets/Scenes/MainMenu.unity
 Нажать Play
 
-Примечание: Если сервера не запущены, игра работает с ИИ по умолчанию (случайные действия / стандартная расстановка).
+Примечание: Если сервера не запущены, игра работает с ИИ по умолчанию.
 
 ---
 
