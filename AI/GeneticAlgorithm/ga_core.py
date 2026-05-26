@@ -12,7 +12,7 @@ INPUT_SIZE = 102
 HIDDEN1 = 64
 HIDDEN2 = 32
 OUTPUT_SIZE = 225
-HOST = '127.0.0.1'
+HOST = "127.0.0.1"
 PORT = 5005
 
 
@@ -41,16 +41,12 @@ class BattleNet(nn.Module):
         start = 0
         for param in self.parameters():
             size = param.numel()
-            new_param = weights[start:start+size].reshape(param.shape)
+            new_param = weights[start : start + size].reshape(param.shape)
             param.copy_(torch.from_numpy(new_param))
             start += size
 
 
-UNIT_COSTS = {
-    1: {1: 3, 2: 6, 3: 9},
-    2: {1: 2, 2: 4, 3: 6},
-    3: {1: 4, 2: 8, 3: 12}
-}
+UNIT_COSTS = {1: {1: 3, 2: 6, 3: 9}, 2: {1: 2, 2: 4, 3: 6}, 3: {1: 4, 2: 8, 3: 12}}
 
 
 def decode_output(probabilities, budget, state_vector):
@@ -59,38 +55,48 @@ def decode_output(probabilities, budget, state_vector):
     occupied_cells = set()
 
     our_half_grid = state_vector[0:25]
-    blocked_cells = {i for i, cell_val in enumerate(our_half_grid) if cell_val == -1 or cell_val == 1}
+    blocked_cells = {
+        i for i, cell_val in enumerate(our_half_grid) if cell_val == -1 or cell_val == 1
+    }
 
     all_options = []
     combinations = [
-        (1, 1), (1, 2), (1, 3),
-        (2, 1), (2, 2), (2, 3),
-        (3, 1), (3, 2), (3, 3)
+        (1, 1),
+        (1, 2),
+        (1, 3),
+        (2, 1),
+        (2, 2),
+        (2, 3),
+        (3, 1),
+        (3, 2),
+        (3, 3),
     ]
 
     for combo_idx, (u_type, u_level) in enumerate(combinations):
         start_idx = combo_idx * 25
-        chunk = probabilities[start_idx:start_idx + 25]
+        chunk = probabilities[start_idx : start_idx + 25]
         for cell_idx, confidence in enumerate(chunk):
-            all_options.append({
-                'cell': cell_idx,
-                'type': u_type,
-                'level': u_level,
-                'conf': confidence,
-                'cost': UNIT_COSTS[u_type][u_level]
-            })
+            all_options.append(
+                {
+                    "cell": cell_idx,
+                    "type": u_type,
+                    "level": u_level,
+                    "conf": confidence,
+                    "cost": UNIT_COSTS[u_type][u_level],
+                }
+            )
 
-    all_options.sort(key=lambda x: x['conf'], reverse=True)
+    all_options.sort(key=lambda x: x["conf"], reverse=True)
 
     for opt in all_options:
-        if opt['cell'] in occupied_cells or opt['cell'] in blocked_cells:
+        if opt["cell"] in occupied_cells or opt["cell"] in blocked_cells:
             continue
-        if opt['conf'] < 0.2:
+        if opt["conf"] < 0.2:
             continue
-        if current_budget >= opt['cost']:
-            layout[opt['cell']] = f"{opt['type']}:{opt['level']}"
-            current_budget -= opt['cost']
-            occupied_cells.add(opt['cell'])
+        if current_budget >= opt["cost"]:
+            layout[opt["cell"]] = f"{opt['type']}:{opt['level']}"
+            current_budget -= opt["cost"]
+            occupied_cells.add(opt["cell"])
 
     return ",".join(layout)
 
@@ -111,6 +117,7 @@ class GAManager:
             subset_indices = random.sample(range(self.pop_size), 4)
             best_in_subset = max(subset_indices, key=lambda i: fitness_scores[i])
             return self.population[best_in_subset]
+
         parent1 = tournament()
         parent2 = tournament()
         attempts = 0
@@ -140,7 +147,7 @@ class GAManager:
         current_avg = np.mean(fitness_scores)
 
         if len(self.fitness_history) > 0:
-            prev_max = self.fitness_history[-1]['max']
+            prev_max = self.fitness_history[-1]["max"]
             if current_max <= prev_max + 1:
                 self.stagnation_counter += 1
             else:
@@ -152,17 +159,19 @@ class GAManager:
         else:
             self.stagnation_counter = 0
 
-        self.fitness_history.append({
-            'max': float(current_max),
-            'avg': float(current_avg),
-            'min': float(min(fitness_scores)),
-            'win_rate': win_rate,
-            'diversity': diversity,
-            'mutation_power': self.mutation_power
-        })
+        self.fitness_history.append(
+            {
+                "max": float(current_max),
+                "avg": float(current_avg),
+                "min": float(min(fitness_scores)),
+                "win_rate": win_rate,
+                "diversity": diversity,
+                "mutation_power": self.mutation_power,
+            }
+        )
 
         try:
-            with open('ga_metrics.json', 'w', encoding='utf-8') as f:
+            with open("ga_metrics.json", "w", encoding="utf-8") as f:
                 json.dump(self.fitness_history, f, indent=4, ensure_ascii=False)
         except Exception as e:
             print(f"Ошибка: {e}")
@@ -183,13 +192,13 @@ class GAManager:
             self.best_fitness = current_max
             self.best_model = copy.deepcopy(champion)
             try:
-                torch.save(self.best_model.state_dict(), 'best_ga_model_best.pth')
+                torch.save(self.best_model.state_dict(), "best_ga_model_best.pth")
                 print(f"Новая лучшая модель! Fitness: {self.best_fitness:.2f}")
             except Exception as e:
                 print(f"Ошибка: {e}")
 
         try:
-            torch.save(champion.state_dict(), 'best_ga_model.pth')
+            torch.save(champion.state_dict(), "best_ga_model.pth")
         except Exception as e:
             print(f"Ошибка: {e}")
 
@@ -216,16 +225,18 @@ def run_evolution_cycle():
 
         while True:
             fitness_scores = []
-            print(f"\n--- [Поколение {generation}]: Ожидание {POP_SIZE} подключений ---")
+            print(
+                f"\n--- [Поколение {generation}]: Ожидание {POP_SIZE} подключений ---"
+            )
 
             for i in range(POP_SIZE):
                 conn, addr = server_socket.accept()
                 with conn:
                     raw_data = conn.recv(4096).decode().strip()
-                    parts = raw_data.split('|')
+                    parts = raw_data.split("|")
                     budget = float(parts[0])
                     last_fitness = float(parts[1])
-                    state_vector = np.fromstring(parts[2], sep=',')
+                    state_vector = np.fromstring(parts[2], sep=",")
 
                     fitness_scores.append(last_fitness)
 
@@ -236,7 +247,9 @@ def run_evolution_cycle():
 
                     layout = decode_output(probabilities, budget, state_vector)
                     conn.sendall(layout.encode())
-                    print(f"  [OK] Бот {i+1}/{POP_SIZE} обсчитан. Fitness: {last_fitness:.2f}")
+                    print(
+                        f"  [OK] Бот {i+1}/{POP_SIZE} обсчитан. Fitness: {last_fitness:.2f}"
+                    )
 
             if len(fitness_scores) == POP_SIZE:
                 ga.evolve(fitness_scores)

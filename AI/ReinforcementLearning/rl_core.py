@@ -3,6 +3,7 @@ import torch.nn as nn
 import random
 from collections import deque
 
+
 class DQN(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
@@ -15,7 +16,7 @@ class DQN(nn.Module):
             nn.Dropout(0.1),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(64, output_size)
+            nn.Linear(64, output_size),
         )
 
     def forward(self, x):
