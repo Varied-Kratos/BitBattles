@@ -61,8 +61,8 @@
 
 ## Геймплей и механики
 
-### Главное окно игры
-<img width="1460" height="573" alt="изображение" src="https://github.com/user-attachments/assets/b35841fb-7def-4a21-8c9a-4094a04f24f2" />
+### Менюшка игры
+<img width="834" height="469" alt="изображение" src="https://github.com/user-attachments/assets/4147baed-378c-4ea9-954c-09fdc7a5894c" />
 
 ### Начало игры
 Создание профиля игрока
@@ -72,7 +72,8 @@
 
 
 Изменение статистики после игры
-  
+<img width="837" height="462" alt="изображение" src="https://github.com/user-attachments/assets/cd154e24-8c11-44b9-8439-f9a67da69023" />
+
 ### Процесс игры
 Поле боя
 <img width="836" height="463" alt="изображение" src="https://github.com/user-attachments/assets/f5e986c3-22e3-49a4-8316-e3a15cd420ab" />
@@ -81,8 +82,10 @@
 
 ### Окончание игры
 Поражение
+<img width="838" height="463" alt="изображение" src="https://github.com/user-attachments/assets/f5f2988e-197d-4bed-bb83-aa170df0b0dc" />
 
 Победа
+<img width="835" height="467" alt="изображение" src="https://github.com/user-attachments/assets/4bcfd1ff-a3d3-4192-82c0-ad1925663b5d" />
 
 ### Игровое поле
 
