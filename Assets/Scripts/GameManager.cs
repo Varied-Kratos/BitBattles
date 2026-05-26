@@ -20,4 +20,13 @@ public class GameManager : MonoBehaviour
             mPieceManager.Setup(mBoard);
         }
     }
+
+    void Update()
+    {
+        // ������ ��� �� ������� ������� (��� �����)
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            mPieceManager.StartBattle();
+        }
+    }
 }

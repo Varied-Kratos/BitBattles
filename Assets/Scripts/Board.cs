@@ -9,7 +9,9 @@ public enum CellState
     Friendly,
     Enemy,
     Free,
-    OutOfBounds
+    OutOfBounds,
+    InvalidTeamSide,
+    Blocked   // ← новое
 }
 
 public class Board : MonoBehaviour
@@ -19,7 +21,7 @@ public class Board : MonoBehaviour
     // Для Clash Mini поле 5 в ширину и 10 в длину (всего 50)
     [HideInInspector]
     public Cell[,] mAllCells = new Cell[5, 10];
-
+    public GameObject mFullBackground; // Перетащи в инспекторе
     public void Create()
     {
         mAllCells = new Cell[5, 10]; 
@@ -67,23 +69,38 @@ public class Board : MonoBehaviour
         }
         #endregion
     }
-
     public CellState ValidateCell(int targetX, int targetY, BasePiece checkingPiece)
     {
-        // Обновленная проверка границ под 5x10
         if (targetX < 0 || targetX >= 5 || targetY < 0 || targetY >= 10)
             return CellState.OutOfBounds;
 
+        if (checkingPiece == null)
+            return CellState.Free;
+
         Cell targetCell = mAllCells[targetX, targetY];
+
+        // Проверка на камень
+        PieceManager pm = FindFirstObjectByType<PieceManager>();     
+        if (pm != null && pm.blockedCells.Contains(new Vector2Int(targetX, targetY)))
+            return CellState.Blocked;
 
         if (targetCell.mCurrentPiece != null)
         {
             if (checkingPiece.mColor == targetCell.mCurrentPiece.mColor)
                 return CellState.Friendly;
-
             return CellState.Enemy;
         }
 
         return CellState.Free;
     }
+    void Start()
+    {
+        if (mFullBackground != null)
+        {
+            RectTransform bgRect = mFullBackground.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(500, 1000);
+            bgRect.anchoredPosition = new Vector2(250, 500); // Центр поля
+        }
+    }
 }
+
