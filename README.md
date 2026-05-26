@@ -105,7 +105,7 @@
 ### Система уровней
 
 Слияние: два одинаковых юнита → улучшенный (уровень 2, затем 3). Характеристики умножаются: x2 для 2 уровня, x3.5 для 3 уровня. Меняется спрайт, добавляются звёзды.
-<img width="200" height="126" alt="Запись-экрана-2026-05-26-215101-_online-video-cutter com_" src="https://github.com/user-attachments/assets/d40f1ddf-a220-461b-9ff9-6bcb2615b919" />
+- <img width="200" height="126" alt="Запись-экрана-2026-05-26-215101-_online-video-cutter com_" src="https://github.com/user-attachments/assets/d40f1ddf-a220-461b-9ff9-6bcb2615b919" />
 
 ### Экономика
 
