@@ -3,6 +3,7 @@ import torch.nn as nn
 import json
 import socket
 
+
 # ------------------- Архитектура нейросети -------------------
 class DQN(nn.Module):
     def __init__(self, input_size, output_size):
