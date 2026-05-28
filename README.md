@@ -137,28 +137,30 @@ Best of 9 (до 5 побед). Выжившие юниты игрока сохр
 ### Шаги
 
 1. Клонировать репозиторий
-
+```bash
 git clone https://github.com/Varied-Kratos/BitBattles.git
 cd BitBattles
-
+```
 2. Запустить RL-сервер (в отдельном терминале)
-
+```bash
 cd AI/ReinforcementLearning
 python rl_inference.py
-
+```
 3. Запустить GA-сервер (в другом терминале)
-
+```bash
 cd AI/GeneticAlgorithm
 python ga_inference.py
-
+```
 4. Открыть проект в Unity 6
 
 File → Open Project → выбрать папку BitBattles
+
 Дождаться импорта ассетов
 
 5. Запустить сцену
 
-Assets/Scenes/MainMenu.unity
+```Assets/Scenes/MainMenu.unity```
+
 Нажать Play
 
 Примечание: Если сервера не запущены, игра работает с ИИ по умолчанию.
@@ -216,12 +218,6 @@ Assets/Scenes/MainMenu.unity
 - Riot Games, Blizzard, Supercell за вдохновение (Teamfight Tactics, Hearthstone Battlegrounds, Clash Mini)
 - Сообществу PyTorch и Unity за документацию и инструменты
 - НИУ ВШЭ (Нижний Новгород) за поддержку исследовательских проектов
-
----
-
-## Лицензия
-
-Проект распространяется под лицензией MIT.
 
 ---
 
